@@ -11,13 +11,17 @@ function carregarConfig() {
     return {
       porcentagemItens: salva?.porcentagemItens ?? 50,
       porcentagemHoras: salva?.porcentagemHoras ?? 50,
-      salarioMensal: salva?.salarioMensal ?? 3000
+      salarioMensal: salva?.salarioMensal ?? 3000,
+      taxaMaquininha: salva?.taxaMaquininha ?? 0,
+      mostrarMaoObraSeparada: salva?.mostrarMaoObraSeparada ?? false
     };
   } catch {
     return {
       porcentagemItens: 50,
       porcentagemHoras: 50,
-      salarioMensal: 3000
+      salarioMensal: 3000,
+      taxaMaquininha: 0,
+      mostrarMaoObraSeparada: false
     };
   }
 }
@@ -79,16 +83,28 @@ export default function App() {
     if (!totalItens || !horas) return;
 
     const valorHora = (config.salarioMensal || 0) / 220;
-    const custo = valorHora * horas * (1 + config.porcentagemHoras / 100);
+    const custoMaoObra =
+      valorHora * horas * (1 + config.porcentagemHoras / 100);
+
+    const valorMaquininha =
+      totalItens * (config.taxaMaquininha || 0) / 100;
+
+    const dividirMaoObra = config.mostrarMaoObraSeparada;
 
     const res = itensNum.map(item => {
       const perc = item.valor / totalItens;
 
-      const valorFinal =
-        item.valor * (1 + config.porcentagemItens / 100) +
-        custo * perc;
+      const valorBase =
+        item.valor * (1 + config.porcentagemItens / 100);
 
-      return { nome: item.nome, valorFinal };
+      const maoObra = dividirMaoObra ? 0 : custoMaoObra * perc;
+      const maquininha = valorMaquininha * perc;
+
+      return {
+        nome: item.nome,
+        valorFinal: valorBase + maoObra + maquininha,
+        maoObra: dividirMaoObra ? custoMaoObra * perc : 0
+      };
     });
 
     setResultado(res);
@@ -117,12 +133,9 @@ export default function App() {
     <div className="container">
       <img src={logo} alt="logo" className="logo" />
 
-      {/* BOTÃO CONFIG */}
-      <button onClick={() => setMostrarConfig(true)}>
-        ⚙️ Configurar
-      </button>
+      <button onClick={() => setMostrarConfig(true)}>⚙️ Configurar</button>
 
-      {/* MODAL CONFIG */}
+      {/* CONFIG */}
       {mostrarConfig && (
         <div className="modal-overlay">
           <div className="modal">
@@ -155,6 +168,29 @@ export default function App() {
               }
             />
 
+            <label>Taxa da maquininha (%)</label>
+            <input
+              type="number"
+              value={config.taxaMaquininha}
+              onChange={(e) =>
+                setConfig({ ...config, taxaMaquininha: Number(e.target.value) })
+              }
+            />
+
+            <label style={{ display: "flex", gap: "10px" }}>
+              <input
+                type="checkbox"
+                checked={config.mostrarMaoObraSeparada}
+                onChange={(e) =>
+                  setConfig({
+                    ...config,
+                    mostrarMaoObraSeparada: e.target.checked
+                  })
+                }
+              />
+              Separar mão de obra dos itens
+            </label>
+
             <button onClick={() => setMostrarConfig(false)}>
               Fechar
             </button>
@@ -162,7 +198,7 @@ export default function App() {
         </div>
       )}
 
-      {/* MODAL DESCONTO */}
+      {/* DESCONTO */}
       {mostrarDesconto && (
         <div className="modal-overlay">
           <div className="modal">
@@ -170,7 +206,6 @@ export default function App() {
 
             <input
               type="number"
-              placeholder="Ex: 10"
               value={desconto.porcentagem}
               onChange={(e) =>
                 setDesconto({
@@ -231,12 +266,9 @@ export default function App() {
         </div>
       ))}
 
-      {/* 🔥 BOTÕES LADO A LADO COM ESPAÇO */}
       <div style={{ display: "flex", gap: "15px", marginTop: "10px" }}>
         <button onClick={adicionarItem}>+ Item</button>
-        <button onClick={() => setMostrarDesconto(true)}>
-          💸 Desconto
-        </button>
+        <button onClick={() => setMostrarDesconto(true)}>💸 Desconto</button>
       </div>
 
       <h3>Horas</h3>
@@ -257,6 +289,7 @@ export default function App() {
         resultado={resultado}
         cliente={cliente}
         desconto={desconto}
+        config={config}
       />
     </div>
   );
