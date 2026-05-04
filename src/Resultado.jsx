@@ -1,10 +1,15 @@
 import jsPDF from "jspdf";
 import logo from "./assets/logo.png";
 
-export function Resultado({ resultado, cliente }) {
+export function Resultado({ resultado, cliente, desconto }) {
   if (!resultado.length) return null;
 
-  const total = resultado.reduce((a, i) => a + i.valorFinal, 0);
+  const subtotal = resultado.reduce((a, i) => a + i.valorFinal, 0);
+
+  const valorDesconto =
+    subtotal * ((desconto?.porcentagem || 0) / 100);
+
+  const total = subtotal - valorDesconto;
 
   function gerarPDF() {
     const doc = new jsPDF();
@@ -62,6 +67,16 @@ export function Resultado({ resultado, cliente }) {
       y += 7;
     });
 
+    // DESCONTO
+    if (desconto?.porcentagem > 0) {
+      y += 5;
+      doc.text(
+        `Desconto (${desconto.porcentagem}% - ${desconto.motivo}): - R$ ${valorDesconto.toFixed(2)}`,
+        12,
+        y
+      );
+    }
+
     y += 5;
     doc.line(120, y, 200, y);
 
@@ -81,7 +96,6 @@ export function Resultado({ resultado, cliente }) {
 
     doc.addImage(logo, "PNG", footerX, 270, footerWidth, footerHeight);
 
-    // 🔥 nome do arquivo dinâmico
     const cpf = (cliente.documento || "").replace(/\D/g, "");
     const placa = (cliente.placa || "").replace(/\s/g, "").toUpperCase();
 
@@ -98,6 +112,13 @@ export function Resultado({ resultado, cliente }) {
           <strong>R$ {item.valorFinal.toFixed(2)}</strong>
         </div>
       ))}
+
+      {desconto?.porcentagem > 0 && (
+        <div className="resumo-item">
+          <span>Desconto ({desconto.porcentagem}%)</span>
+          <strong>- R$ {valorDesconto.toFixed(2)}</strong>
+        </div>
+      )}
 
       <div className="total">
         <span>Total</span>

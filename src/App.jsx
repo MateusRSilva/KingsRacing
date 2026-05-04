@@ -27,6 +27,13 @@ export default function App() {
   const [resultado, setResultado] = useState([]);
   const [horas, setHoras] = useState(0);
   const [mostrarConfig, setMostrarConfig] = useState(false);
+
+  const [mostrarDesconto, setMostrarDesconto] = useState(false);
+  const [desconto, setDesconto] = useState({
+    porcentagem: 0,
+    motivo: ""
+  });
+
   const [config, setConfig] = useState(carregarConfig);
 
   const [cliente, setCliente] = useState({
@@ -86,13 +93,14 @@ export default function App() {
     setResultado(res);
   }
 
-  // 🔥 LIMPAR TUDO
   function limparTudo() {
     if (!window.confirm("Tem certeza que deseja limpar tudo?")) return;
 
     setItens([{ nome: "", valor: "" }]);
     setResultado([]);
     setHoras(0);
+
+    setDesconto({ porcentagem: 0, motivo: "" });
 
     setCliente({
       nome: "",
@@ -107,45 +115,44 @@ export default function App() {
 
   return (
     <div className="container">
-      {/* LOGO */}
       <img src={logo} alt="logo" className="logo" />
 
       <button onClick={() => setMostrarConfig(true)}>⚙️ Configurar</button>
 
-      {mostrarConfig && (
+      <button onClick={() => setMostrarDesconto(true)}>💸 Desconto</button>
+
+      {/* MODAL DESCONTO */}
+      {mostrarDesconto && (
         <div className="modal-overlay">
           <div className="modal">
-            <h3>Configurações</h3>
+            <h3>Desconto (%)</h3>
 
-            <label>Porcentagem sobre os itens (%)</label>
             <input
               type="number"
-              value={config.porcentagemItens}
+              placeholder="Porcentagem (ex: 10)"
+              value={desconto.porcentagem}
               onChange={(e) =>
-                setConfig({ ...config, porcentagemItens: Number(e.target.value) })
+                setDesconto({
+                  ...desconto,
+                  porcentagem: Number(e.target.value)
+                })
               }
             />
 
-            <label>Porcentagem sobre a mão de obra (%)</label>
             <input
-              type="number"
-              value={config.porcentagemHoras}
+              type="text"
+              placeholder="Motivo"
+              value={desconto.motivo}
               onChange={(e) =>
-                setConfig({ ...config, porcentagemHoras: Number(e.target.value) })
+                setDesconto({
+                  ...desconto,
+                  motivo: e.target.value
+                })
               }
             />
 
-            <label>Salário mensal (R$)</label>
-            <input
-              type="number"
-              value={config.salarioMensal}
-              onChange={(e) =>
-                setConfig({ ...config, salarioMensal: Number(e.target.value) })
-              }
-            />
-
-            <button onClick={() => setMostrarConfig(false)}>
-              Salvar e fechar
+            <button onClick={() => setMostrarDesconto(false)}>
+              Salvar
             </button>
           </div>
         </div>
@@ -199,7 +206,11 @@ export default function App() {
         🧹 Limpar tudo
       </button>
 
-      <Resultado resultado={resultado} cliente={cliente} />
+      <Resultado
+        resultado={resultado}
+        cliente={cliente}
+        desconto={desconto}
+      />
     </div>
   );
 }
