@@ -6,26 +6,31 @@ export function Resultado({ resultado, cliente, desconto, config }) {
 
   const pageWidth = 210;
 
-  // --- LÓGICA DE CÁLCULO ---
-  
-  // 1. Subtotal apenas dos itens (Peças + Margem + MO interna se houver)
+  // --- LÓGICA DE CÁLCULO (CORRIGIDA E ORGANIZADA) ---
+
+  // 1. Subtotal apenas dos itens (Peças / Serviços)
   const subtotalItens = resultado.reduce((a, i) => a + i.valorBase, 0);
-  
-  // 2. Valor da Mão de Obra Separada (não entra no subtotal de itens)
+
+  // 2. Mão de obra separada (se ativado)
   const totalMaoObraSeparada = config?.mostrarMaoObraSeparada
     ? resultado.reduce((a, i) => a + (i.maoObraIndividual || 0), 0)
     : 0;
 
-  // 3. Calcula Desconto sobre a soma de tudo antes da taxa
-  const baseParaDesconto = subtotalItens + totalMaoObraSeparada;
-  const valorDesconto = baseParaDesconto * ((desconto?.porcentagem || 0) / 100);
-  
-  // 4. Calcula Taxa da Maquininha sobre o valor pós-desconto
-  const valorPosDesconto = baseParaDesconto - valorDesconto;
+  // 3. Base real total (itens + mão de obra)
+  const baseTotal = subtotalItens + totalMaoObraSeparada;
+
+  // 4. Desconto aplicado corretamente em cima do total real
+  const valorDesconto =
+    baseTotal * ((desconto?.porcentagem || 0) / 100);
+
+  // 5. Valor após desconto
+  const valorPosDesconto = baseTotal - valorDesconto;
+
+  // 6. Taxa da maquininha aplicada após desconto
   const taxaMaq = (config?.taxaMaquininha || 0) / 100;
   const valorTaxaMaquininha = valorPosDesconto * taxaMaq;
 
-  // 5. TOTAL GERAL FINAL
+  // 7. TOTAL FINAL
   const totalGeral = valorPosDesconto + valorTaxaMaquininha;
 
   function gerarPDF() {
@@ -45,6 +50,7 @@ export function Resultado({ resultado, cliente, desconto, config }) {
 
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
+
     const info = [
       `Data: ${cliente.data}`,
       `Nome: ${cliente.nome}`,
@@ -57,7 +63,11 @@ export function Resultado({ resultado, cliente, desconto, config }) {
 
     const startY = y;
     const lh = 6;
-    info.forEach((t, i) => { doc.text(t, 12, y + (i + 1) * lh); });
+
+    info.forEach((t, i) => {
+      doc.text(t, 12, y + (i + 1) * lh);
+    });
+
     doc.rect(10, startY, 190, info.length * lh + 8);
     y += info.length * lh + 15;
 
@@ -65,59 +75,76 @@ export function Resultado({ resultado, cliente, desconto, config }) {
     doc.text("Descrição do Serviço / Peça", 12, y);
     doc.text("Valor", 190, y, { align: "right" });
 
-    y += 5; doc.line(10, y, 200, y); y += 7;
+    y += 5;
+    doc.line(10, y, 200, y);
+    y += 7;
 
     doc.setFont("helvetica", "normal");
+
     resultado.forEach((item) => {
       doc.text(item.nome || "Item sem nome", 12, y);
-      doc.text(`R$ ${item.valorBase.toFixed(2)}`, 190, y, { align: "right" });
+      doc.text(`R$ ${item.valorBase.toFixed(2)}`, 190, y, {
+        align: "right",
+      });
       y += 7;
     });
 
-    y += 5; doc.line(120, y, 200, y); y += 7;
+    y += 5;
+    doc.line(120, y, 200, y);
+    y += 7;
 
-    // --- RODAPÉ DE VALORES ---
+    // --- RESUMO FINAL ---
+
     doc.text("Subtotal:", 140, y);
-    doc.text(`R$ ${subtotalItens.toFixed(2)}`, 190, y, { align: "right" });
+    doc.text(`R$ ${subtotalItens.toFixed(2)}`, 190, y, {
+      align: "right",
+    });
     y += 7;
 
     if (config?.mostrarMaoObraSeparada) {
       doc.setFont("helvetica", "bold");
       doc.text("Mão de Obra:", 140, y);
-      doc.text(`R$ ${totalMaoObraSeparada.toFixed(2)}`, 190, y, { align: "right" });
+      doc.text(`R$ ${totalMaoObraSeparada.toFixed(2)}`, 190, y, {
+        align: "right",
+      });
       doc.setFont("helvetica", "normal");
       y += 7;
     }
 
     if (desconto?.porcentagem > 0) {
       doc.text(`Desconto (${desconto.porcentagem}%):`, 140, y);
-      doc.text(`- R$ ${valorDesconto.toFixed(2)}`, 190, y, { align: "right" });
+      doc.text(`- R$ ${valorDesconto.toFixed(2)}`, 190, y, {
+        align: "right",
+      });
       y += 7;
     }
 
     if (config?.taxaMaquininha > 0) {
       doc.text(`Taxa Cartão (${config.taxaMaquininha}%):`, 140, y);
-      doc.text(`R$ ${valorTaxaMaquininha.toFixed(2)}`, 190, y, { align: "right" });
+      doc.text(`R$ ${valorTaxaMaquininha.toFixed(2)}`, 190, y, {
+        align: "right",
+      });
       y += 7;
     }
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
     doc.text("TOTAL GERAL:", 140, y);
-    doc.text(`R$ ${totalGeral.toFixed(2)}`, 190, y, { align: "right" });
+    doc.text(`R$ ${totalGeral.toFixed(2)}`, 190, y, {
+      align: "right",
+    });
 
+    // --- ASSINATURA ---
     y = 250;
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
+
     doc.line(20, y, 100, y);
     doc.text("Autorização do Cliente", 20, y + 7);
 
-     // FOOTER
-
+    // FOOTER
     const footerWidth = 30;
-
     const footerHeight = 15;
-
     const footerX = (pageWidth - footerWidth) / 2;
 
     doc.addImage(logo, "PNG", footerX, 275, footerWidth, footerHeight);
@@ -130,7 +157,9 @@ export function Resultado({ resultado, cliente, desconto, config }) {
       <div className="resumo-header">
         <div>
           <h2>RESUMO DO ORÇAMENTO</h2>
-          <span className="data-orcamento">{cliente.veiculo} • {cliente.placa}</span>
+          <span className="data-orcamento">
+            {cliente.veiculo} • {cliente.placa}
+          </span>
         </div>
         <div className="data-orcamento">{cliente.data}</div>
       </div>
@@ -146,7 +175,9 @@ export function Resultado({ resultado, cliente, desconto, config }) {
           {resultado.map((item, i) => (
             <tr key={i}>
               <td>{item.nome || "Item sem nome"}</td>
-              <td className="col-valor">R$ {item.valorBase.toFixed(2)}</td>
+              <td className="col-valor">
+                R$ {item.valorBase.toFixed(2)}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -168,8 +199,16 @@ export function Resultado({ resultado, cliente, desconto, config }) {
 
           {desconto?.porcentagem > 0 && (
             <div className="total-linha">
-              <span>Desconto <span className="desconto-badge">{desconto.porcentagem}%</span>:</span>
-              <span className="valor-desconto">- R$ {valorDesconto.toFixed(2)}</span>
+              <span>
+                Desconto{" "}
+                <span className="desconto-badge">
+                  {desconto.porcentagem}%
+                </span>
+                :
+              </span>
+              <span className="valor-desconto">
+                - R$ {valorDesconto.toFixed(2)}
+              </span>
             </div>
           )}
 
@@ -182,10 +221,16 @@ export function Resultado({ resultado, cliente, desconto, config }) {
 
           <div className="total-linha destaque">
             <span>TOTAL GERAL:</span>
-            <span className="valor-final">R$ {totalGeral.toFixed(2)}</span>
+            <span className="valor-final">
+              R$ {totalGeral.toFixed(2)}
+            </span>
           </div>
 
-          <button className="btn-primary" style={{ marginTop: '25px', width: '100%' }} onClick={gerarPDF}>
+          <button
+            className="btn-primary"
+            style={{ marginTop: "25px", width: "100%" }}
+            onClick={gerarPDF}
+          >
             📄 GERAR PDF
           </button>
         </div>
