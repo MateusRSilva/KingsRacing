@@ -70,9 +70,17 @@ export function Resultado({ resultado, cliente, desconto }) {
     // DESCONTO
     if (desconto?.porcentagem > 0) {
       y += 5;
+      // DESCRIÇÃO (esquerda)
       doc.text(
-        `Desconto (${desconto.porcentagem}% - ${desconto.motivo}): - R$ ${valorDesconto.toFixed(2)}`,
+        `Desconto (${desconto.porcentagem}% - ${desconto.motivo})`,
         12,
+        y
+      );
+
+      // VALOR (direita alinhado igual os itens)
+      doc.text(
+        `- R$ ${valorDesconto.toFixed(2)}`,
+        170,
         y
       );
     }

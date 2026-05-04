@@ -26,9 +26,10 @@ export default function App() {
   const [itens, setItens] = useState([{ nome: "", valor: "" }]);
   const [resultado, setResultado] = useState([]);
   const [horas, setHoras] = useState(0);
-  const [mostrarConfig, setMostrarConfig] = useState(false);
 
+  const [mostrarConfig, setMostrarConfig] = useState(false);
   const [mostrarDesconto, setMostrarDesconto] = useState(false);
+
   const [desconto, setDesconto] = useState({
     porcentagem: 0,
     motivo: ""
@@ -99,7 +100,6 @@ export default function App() {
     setItens([{ nome: "", valor: "" }]);
     setResultado([]);
     setHoras(0);
-
     setDesconto({ porcentagem: 0, motivo: "" });
 
     setCliente({
@@ -117,9 +117,50 @@ export default function App() {
     <div className="container">
       <img src={logo} alt="logo" className="logo" />
 
-      <button onClick={() => setMostrarConfig(true)}>⚙️ Configurar</button>
+      {/* BOTÃO CONFIG */}
+      <button onClick={() => setMostrarConfig(true)}>
+        ⚙️ Configurar
+      </button>
 
-      <button onClick={() => setMostrarDesconto(true)}>💸 Desconto</button>
+      {/* MODAL CONFIG */}
+      {mostrarConfig && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h3>Configurações</h3>
+
+            <label>% Itens</label>
+            <input
+              type="number"
+              value={config.porcentagemItens}
+              onChange={(e) =>
+                setConfig({ ...config, porcentagemItens: Number(e.target.value) })
+              }
+            />
+
+            <label>% Mão de obra</label>
+            <input
+              type="number"
+              value={config.porcentagemHoras}
+              onChange={(e) =>
+                setConfig({ ...config, porcentagemHoras: Number(e.target.value) })
+              }
+            />
+
+            <label>Salário mensal</label>
+            <input
+              type="number"
+              value={config.salarioMensal}
+              onChange={(e) =>
+                setConfig({ ...config, salarioMensal: Number(e.target.value) })
+              }
+            />
+
+            <button onClick={() => setMostrarConfig(false)}>
+              Fechar
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* MODAL DESCONTO */}
       {mostrarDesconto && (
@@ -129,7 +170,7 @@ export default function App() {
 
             <input
               type="number"
-              placeholder="Porcentagem (ex: 10)"
+              placeholder="Ex: 10"
               value={desconto.porcentagem}
               onChange={(e) =>
                 setDesconto({
@@ -190,7 +231,13 @@ export default function App() {
         </div>
       ))}
 
-      <button onClick={adicionarItem}>+ Item</button>
+      {/* 🔥 BOTÕES LADO A LADO COM ESPAÇO */}
+      <div style={{ display: "flex", gap: "15px", marginTop: "10px" }}>
+        <button onClick={adicionarItem}>+ Item</button>
+        <button onClick={() => setMostrarDesconto(true)}>
+          💸 Desconto
+        </button>
+      </div>
 
       <h3>Horas</h3>
       <input
