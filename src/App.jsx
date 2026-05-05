@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import "./App.css";
+import { DocumentosModal } from "./DocumentosModal";
 import { Resultado } from "./Resultado";
 import logo from "./assets/logo.png";
 
@@ -26,6 +27,7 @@ export default function App() {
   const [horas, setHoras] = useState(0);
   const [calculoAtivado, setCalculoAtivado] = useState(false);
   const [mostrarConfig, setMostrarConfig] = useState(false);
+  const [mostrarDocumentos, setMostrarDocumentos] = useState(false);
   const [mostrarDesconto, setMostrarDesconto] = useState(false);
   const [desconto, setDesconto] = useState({ porcentagem: 0, motivo: "" });
   const [config, setConfig] = useState(carregarConfig);
@@ -45,7 +47,7 @@ export default function App() {
   const atualizarCliente = (campo, valor) => setCliente(prev => ({ ...prev, [campo]: valor }));
   const adicionarItem = () => setItens([...itens, { nome: "", valor: "", isServico: false, isSemMO: false }]);
   const removerItem = (i) => setItens(itens.filter((_, index) => index !== i));
-  
+
   const atualizarItem = (i, campo, valor) => {
     const novos = [...itens];
     novos[i][campo] = valor;
@@ -62,16 +64,16 @@ export default function App() {
     const res = itens.map(item => {
       const valorItem = Number(item.valor || 0);
       const percParticipacao = totalItensOriginal > 0 ? valorItem / totalItensOriginal : 1 / itens.length;
-      
+
       const margem = item.isServico ? 0 : (config.porcentagemItens / 100);
       const valorComMargem = valorItem * (1 + margem);
-      
+
       const mostrarMOnoItem = !config.mostrarMaoObraSeparada && !item.isSemMO;
       const moNoItem = mostrarMOnoItem ? (custoMOComAdicional * percParticipacao) : 0;
 
       return {
         nome: item.nome || "Item sem nome",
-        valorBase: valorComMargem + moNoItem, 
+        valorBase: valorComMargem + moNoItem,
         maoObraIndividual: item.isSemMO ? 0 : (custoMOComAdicional * percParticipacao)
       };
     });
@@ -135,7 +137,7 @@ export default function App() {
                   <label className={`toggle-chip ${item.isServico ? "active" : ""}`}>
                     <input type="checkbox" checked={item.isServico} onChange={(e) => atualizarItem(i, "isServico", e.target.checked)} /> Sem %
                   </label>
-                  <label className={`toggle-chip ${ (config.mostrarMaoObraSeparada || item.isSemMO) ? "active" : "" }`}>
+                  <label className={`toggle-chip ${(config.mostrarMaoObraSeparada || item.isSemMO) ? "active" : ""}`}>
                     <input type="checkbox" checked={config.mostrarMaoObraSeparada ? true : item.isSemMO} disabled={config.mostrarMaoObraSeparada} onChange={(e) => atualizarItem(i, "isSemMO", e.target.checked)} /> Sem MO
                   </label>
                   <button className="btn-delete" onClick={() => removerItem(i)}>✕</button>
@@ -157,6 +159,9 @@ export default function App() {
 
         <section className="action-bar">
           <button className="btn-primary" onClick={calcular}>CALCULAR ORÇAMENTO</button>
+          <button className="btn-outline" onClick={() => setMostrarDocumentos(true)}>
+            📄 DOCUMENTOS
+          </button>
           <div className="secondary-btns">
             <button className="btn-outline" onClick={limparTudo}>LIMPAR TUDO</button>
           </div>
@@ -164,7 +169,7 @@ export default function App() {
 
         {resultado.length > 0 && (
           <div className="resumo-container">
-             <Resultado resultado={resultado} cliente={cliente} desconto={desconto} config={config} />
+            <Resultado resultado={resultado} cliente={cliente} desconto={desconto} config={config} />
           </div>
         )}
       </div>
@@ -172,18 +177,18 @@ export default function App() {
       {mostrarConfig && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h3 className="section-title" style={{textAlign: 'center', marginBottom: '20px'}}>⚙️ Configurações Base</h3>
+            <h3 className="section-title" style={{ textAlign: 'center', marginBottom: '20px' }}>⚙️ Configurações Base</h3>
             <div className="grid-form">
-              <div className="input-group"><label>% LUCRO ITENS</label><input type="number" value={config.porcentagemItens} onChange={e => setConfig({...config, porcentagemItens: Number(e.target.value)})} /></div>
-              <div className="input-group"><label>% ADICIONAL MO</label><input type="number" value={config.porcentagemHoras} onChange={e => setConfig({...config, porcentagemHoras: Number(e.target.value)})} /></div>
-              <div className="input-group"><label>SALÁRIO BASE</label><input type="number" value={config.salarioMensal} onChange={e => setConfig({...config, salarioMensal: Number(e.target.value)})} /></div>
-              <div className="input-group"><label>TAXA MÁQUINA (%)</label><input type="number" value={config.taxaMaquininha} onChange={e => setConfig({...config, taxaMaquininha: Number(e.target.value)})} /></div>
+              <div className="input-group"><label>% LUCRO ITENS</label><input type="number" value={config.porcentagemItens} onChange={e => setConfig({ ...config, porcentagemItens: Number(e.target.value) })} /></div>
+              <div className="input-group"><label>% ADICIONAL MO</label><input type="number" value={config.porcentagemHoras} onChange={e => setConfig({ ...config, porcentagemHoras: Number(e.target.value) })} /></div>
+              <div className="input-group"><label>SALÁRIO BASE</label><input type="number" value={config.salarioMensal} onChange={e => setConfig({ ...config, salarioMensal: Number(e.target.value) })} /></div>
+              <div className="input-group"><label>TAXA MÁQUINA (%)</label><input type="number" value={config.taxaMaquininha} onChange={e => setConfig({ ...config, taxaMaquininha: Number(e.target.value) })} /></div>
             </div>
-            <div className="config-global-item" style={{marginTop: '15px', display: 'flex', alignItems: 'center', gap: '10px'}}>
-              <input type="checkbox" id="moSeparada" checked={config.mostrarMaoObraSeparada} onChange={e => setConfig({...config, mostrarMaoObraSeparada: e.target.checked})} />
+            <div className="config-global-item" style={{ marginTop: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <input type="checkbox" id="moSeparada" checked={config.mostrarMaoObraSeparada} onChange={e => setConfig({ ...config, mostrarMaoObraSeparada: e.target.checked })} />
               <label htmlFor="moSeparada">Separar Mão de Obra no Resumo</label>
             </div>
-            <button className="btn-primary" style={{marginTop: '25px'}} onClick={() => setMostrarConfig(false)}>SALVAR CONFIGURAÇÕES</button>
+            <button className="btn-primary" style={{ marginTop: '25px' }} onClick={() => setMostrarConfig(false)}>SALVAR CONFIGURAÇÕES</button>
           </div>
         </div>
       )}
@@ -194,19 +199,24 @@ export default function App() {
             <h3 className="section-title">Aplicar Desconto</h3>
             <div className="input-group">
               <label>VALOR DO DESCONTO (%)</label>
-              <input type="number" value={desconto.porcentagem || ""} onChange={e => setDesconto({...desconto, porcentagem: Number(e.target.value)})} />
+              <input type="number" value={desconto.porcentagem || ""} onChange={e => setDesconto({ ...desconto, porcentagem: Number(e.target.value) })} />
             </div>
-            <div className="input-group" style={{marginTop: '15px'}}>
+            <div className="input-group" style={{ marginTop: '15px' }}>
               <label>MOTIVO</label>
-              <input type="text" value={desconto.motivo} onChange={e => setDesconto({...desconto, motivo: e.target.value})} />
+              <input type="text" value={desconto.motivo} onChange={e => setDesconto({ ...desconto, motivo: e.target.value })} />
             </div>
             <div style={{ display: 'flex', gap: '10px', marginTop: '25px' }}>
-                <button className="btn-primary" style={{ flex: 2 }} onClick={() => setMostrarDesconto(false)}>APLICAR</button>
-                <button className="btn-outline" style={{ flex: 1, borderColor: '#ff4d4d', color: '#ff4d4d' }} onClick={() => { setDesconto({ porcentagem: 0, motivo: "" }); setMostrarDesconto(false); }}>LIMPAR</button>
+              <button className="btn-primary" style={{ flex: 2 }} onClick={() => setMostrarDesconto(false)}>APLICAR</button>
+              <button className="btn-outline" style={{ flex: 1, borderColor: '#ff4d4d', color: '#ff4d4d' }} onClick={() => { setDesconto({ porcentagem: 0, motivo: "" }); setMostrarDesconto(false); }}>LIMPAR</button>
             </div>
           </div>
         </div>
       )}
+      <DocumentosModal
+        open={mostrarDocumentos}
+        onClose={() => setMostrarDocumentos(false)}
+        cliente={cliente}
+      />
     </div>
   );
 }
