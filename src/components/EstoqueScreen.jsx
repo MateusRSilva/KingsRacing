@@ -13,6 +13,9 @@ const DEFAULT_TEMPLATE = [
 
 const CACHE_KEY = "kingsracing_estoque_cache";
 
+// HANDLE GLOBAL
+window.kingsFileHandle = window.kingsFileHandle || null;
+
 export function EstoqueScreen({ onBack }) {
   const [estoqueData, setEstoqueData] = useState([]);
   const [jsonFileName, setJsonFileName] = useState("estoque.json");
@@ -49,22 +52,31 @@ export function EstoqueScreen({ onBack }) {
 
   const gerarCodigo = () => {
     const ultimoIndex = estoqueData.length + 1;
+
     return `P${String(ultimoIndex).padStart(3, "0")}`;
   };
 
-  const salvarDiretoNoArquivo = async (data) => {
-    if (!fileHandle) return false;
+  const salvarDiretoNoArquivo = async (
+    data,
+    customHandle = null
+  ) => {
+    const handle = customHandle || fileHandle;
+
+    if (!handle) return false;
 
     try {
-      const writable = await fileHandle.createWritable();
+      const writable = await handle.createWritable();
 
-      await writable.write(JSON.stringify(data, null, 2));
+      await writable.write(
+        JSON.stringify(data, null, 2)
+      );
 
       await writable.close();
 
       return true;
     } catch (error) {
       console.error("Erro ao salvar:", error);
+
       return false;
     }
   };
@@ -83,6 +95,9 @@ export function EstoqueScreen({ onBack }) {
         ],
       });
 
+      // SALVA GLOBALMENTE
+      window.kingsFileHandle = handle;
+
       setFileHandle(handle);
 
       setEstoqueData(DEFAULT_TEMPLATE);
@@ -91,7 +106,11 @@ export function EstoqueScreen({ onBack }) {
 
       persistCache(DEFAULT_TEMPLATE, "estoque.json");
 
-      await salvarDiretoNoArquivo(DEFAULT_TEMPLATE);
+      // USA O HANDLE DIRETAMENTE
+      await salvarDiretoNoArquivo(
+        DEFAULT_TEMPLATE,
+        handle
+      );
     } catch (error) {
       console.error(error);
     }
@@ -121,6 +140,9 @@ export function EstoqueScreen({ onBack }) {
         return;
       }
 
+      // SALVA GLOBALMENTE
+      window.kingsFileHandle = handle;
+
       setFileHandle(handle);
 
       setEstoqueData(jsonData);
@@ -142,7 +164,9 @@ export function EstoqueScreen({ onBack }) {
 
     persistCache(estoqueData, jsonFileName);
 
-    const salvou = await salvarDiretoNoArquivo(estoqueData);
+    const salvou = await salvarDiretoNoArquivo(
+      estoqueData
+    );
 
     if (!salvou) {
       alert("Erro ao salvar arquivo.");
@@ -180,7 +204,9 @@ export function EstoqueScreen({ onBack }) {
   };
 
   const removerProduto = (index) => {
-    const updated = estoqueData.filter((_, i) => i !== index);
+    const updated = estoqueData.filter(
+      (_, i) => i !== index
+    );
 
     setEstoqueData(updated);
 
@@ -195,18 +221,24 @@ export function EstoqueScreen({ onBack }) {
             <h2>Sistema de Estoque</h2>
 
             <p>
-              Gerencie peças, códigos, quantidades e valores diretamente pela
-              interface.
+              Gerencie peças, códigos, quantidades e
+              valores diretamente pela interface.
             </p>
           </div>
 
-          <button className="btn-outline" onClick={onBack}>
+          <button
+            className="btn-outline"
+            onClick={onBack}
+          >
             ← Voltar
           </button>
         </div>
 
         <div className="excel-actions">
-          <button className="btn-primary" onClick={criarNovoEstoque}>
+          <button
+            className="btn-primary"
+            onClick={criarNovoEstoque}
+          >
             Gerar JSON
           </button>
 
@@ -238,9 +270,11 @@ export function EstoqueScreen({ onBack }) {
             <table className="excel-table">
               <thead>
                 <tr>
-                  {Object.keys(estoqueData[0]).map((column) => (
-                    <th key={column}>{column}</th>
-                  ))}
+                  {Object.keys(estoqueData[0]).map(
+                    (column) => (
+                      <th key={column}>{column}</th>
+                    )
+                  )}
 
                   <th>Ações</th>
                 </tr>
@@ -249,26 +283,32 @@ export function EstoqueScreen({ onBack }) {
               <tbody>
                 {estoqueData.map((row, rowIndex) => (
                   <tr key={rowIndex}>
-                    {Object.entries(row).map(([key, value]) => (
-                      <td key={key}>
-                        <input
-                          value={value}
-                          disabled={key === "Codigo"}
-                          onChange={(event) =>
-                            atualizarLinha(
-                              rowIndex,
-                              key,
-                              event.target.value
-                            )
-                          }
-                        />
-                      </td>
-                    ))}
+                    {Object.entries(row).map(
+                      ([key, value]) => (
+                        <td key={key}>
+                          <input
+                            value={value}
+                            disabled={
+                              key === "Codigo"
+                            }
+                            onChange={(event) =>
+                              atualizarLinha(
+                                rowIndex,
+                                key,
+                                event.target.value
+                              )
+                            }
+                          />
+                        </td>
+                      )
+                    )}
 
                     <td>
                       <button
                         className="btn-delete"
-                        onClick={() => removerProduto(rowIndex)}
+                        onClick={() =>
+                          removerProduto(rowIndex)
+                        }
                       >
                         Remover
                       </button>
