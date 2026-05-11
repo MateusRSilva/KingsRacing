@@ -5,8 +5,8 @@ const DEFAULT_TEMPLATE = [
     Codigo: "P001",
     Produto: "",
     Quantidade: 0,
-    ValorDeCompra: 0,
-    ValorDeVenda: 0,
+    PrecoCompra: 0,
+    PrecoVenda: 0,
     Observacao: "",
   },
 ];
@@ -231,7 +231,7 @@ export function EstoqueScreen({ onBack }) {
     try {
       // DESKTOP
       if (
-        window.showOpenFilePicker && !event
+        window.showOpenFilePicker
       ) {
         const [handle] =
           await window.showOpenFilePicker(
@@ -365,22 +365,9 @@ export function EstoqueScreen({ onBack }) {
       ...estoqueData,
     ];
 
-    let finalValue = value;
-    const camposNumericos = ["Quantidade", "ValorDeCompra", "ValorDeVenda"];
-
-    if (camposNumericos.includes(key)) {
-      if (value === "") {
-        finalValue = 0;
-      } else {
-        // Remove zeros à esquerda e converte para número
-        const sanitized = value.replace(/^0+/, '');
-        finalValue = sanitized === "" ? 0 : Number(sanitized);
-      }
-    }
-
     updated[rowIndex] = {
       ...updated[rowIndex],
-      [key]: finalValue,
+      [key]: value,
     };
 
     setEstoqueData(updated);
@@ -396,7 +383,7 @@ export function EstoqueScreen({ onBack }) {
       Codigo: gerarCodigo(),
       Produto: "",
       Quantidade: 0,
-      ValorDeCompra: 0,
+      PrecoCompra: 0,
       ValorDeVenda: 0,
       Observacao: "",
     };
@@ -577,7 +564,6 @@ export function EstoqueScreen({ onBack }) {
                             }
                           >
                             <input
-                              type={["Quantidade", "ValorDeCompra", "ValorDeVenda"].includes(key) ? "number" : "text"}
                               value={
                                 value
                               }
@@ -585,7 +571,6 @@ export function EstoqueScreen({ onBack }) {
                                 key ===
                                 "Codigo"
                               }
-                              onFocus={(e) => value === 0 && e.target.select()}
                               onChange={(
                                 event
                               ) =>
