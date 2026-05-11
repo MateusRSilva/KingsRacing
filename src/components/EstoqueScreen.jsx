@@ -384,7 +384,7 @@ export function EstoqueScreen({ onBack }) {
       Produto: "",
       Quantidade: 0,
       PrecoCompra: 0,
-      ValorDeVenda: 0,
+      PrecoVenda: 0,
       Observacao: "",
     };
 
@@ -557,34 +557,38 @@ export function EstoqueScreen({ onBack }) {
                         ([
                           key,
                           value,
-                        ]) => (
-                          <td
-                            key={
-                              key
-                            }
-                          >
-                            <input
-                              value={
-                                value
+                        ]) => {
+                          const isNumberField = ["Quantidade", "PrecoCompra", "PrecoVenda", "ValorDeVenda"].includes(key);
+                          
+                          return (
+                            <td
+                              key={
+                                key
                               }
-                              disabled={
-                                key ===
-                                "Codigo"
-                              }
-                              onChange={(
-                                event
-                              ) =>
-                                atualizarLinha(
-                                  rowIndex,
-                                  key,
+                            >
+                              <input
+                                type={isNumberField ? "number" : "text"}
+                                value={value}
+                                disabled={
+                                  key ===
+                                  "Codigo"
+                                }
+                                onChange={(
                                   event
-                                    .target
-                                    .value
-                                )
-                              }
-                            />
-                          </td>
-                        )
+                                ) => {
+                                  const rawVal = event.target.value;
+                                  const finalVal = isNumberField ? (rawVal === "" ? 0 : Number(rawVal)) : rawVal;
+                                  
+                                  atualizarLinha(
+                                    rowIndex,
+                                    key,
+                                    finalVal
+                                  )
+                                }}
+                              />
+                            </td>
+                          )
+                        }
                       )}
 
                       <td>
