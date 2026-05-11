@@ -42,10 +42,13 @@ export function VendasScreen({ onBack }) {
     );
   };
 
-  // NOVO
+  // SALVA DIRETO NO JSON
   const salvarNoArquivo = async (dados) => {
     try {
-      if (!window.kingsFileHandle) return;
+      if (!window.kingsFileHandle) {
+        console.log("Nenhum arquivo carregado");
+        return;
+      }
 
       const writable =
         await window.kingsFileHandle.createWritable();
@@ -55,6 +58,8 @@ export function VendasScreen({ onBack }) {
       );
 
       await writable.close();
+
+      console.log("JSON atualizado");
     } catch (error) {
       console.error("Erro ao salvar arquivo:", error);
     }
@@ -116,13 +121,15 @@ export function VendasScreen({ onBack }) {
       return produto;
     });
 
+    // ATUALIZA ESTADO
     setProdutos(novosProdutos);
 
     setProdutosFiltrados(novosProdutos);
 
+    // ATUALIZA CACHE
     atualizarCache(novosProdutos);
 
-    // SALVA DIRETO NO JSON
+    // ATUALIZA JSON FÍSICO
     await salvarNoArquivo(novosProdutos);
 
     alert("Venda realizada com sucesso!");
