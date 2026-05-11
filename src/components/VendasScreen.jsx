@@ -1,26 +1,21 @@
 import { useState, useEffect } from "react";
 
 const CACHE_KEY = "kingsracing_estoque_cache";
-
-// HANDLE GLOBAL
 window.kingsFileHandle = window.kingsFileHandle || null;
 
 export function VendasScreen({ onBack }) {
   const [produtos, setProdutos] = useState([]);
   const [busca, setBusca] = useState("");
   const [produtosFiltrados, setProdutosFiltrados] = useState([]);
-
   const [popupVenda, setPopupVenda] = useState(false);
   const [produtoSelecionado, setProdutoSelecionado] = useState(null);
   const [quantidadeVenda, setQuantidadeVenda] = useState(1);
 
   useEffect(() => {
     const cache = localStorage.getItem(CACHE_KEY);
-
     if (cache) {
       try {
         const { data } = JSON.parse(cache);
-
         if (Array.isArray(data) && data.length > 0) {
           setProdutos(data);
           setProdutosFiltrados(data);
@@ -34,32 +29,15 @@ export function VendasScreen({ onBack }) {
   }, []);
 
   const atualizarCache = (novosProdutos) => {
-    localStorage.setItem(
-      CACHE_KEY,
-      JSON.stringify({
-        data: novosProdutos,
-      })
-    );
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ data: novosProdutos }));
   };
 
-  // SALVA DIRETO NO JSON
   const salvarNoArquivo = async (dados) => {
     try {
-      if (!window.kingsFileHandle) {
-        console.log("Nenhum arquivo carregado");
-        return;
-      }
-
-      const writable =
-        await window.kingsFileHandle.createWritable();
-
-      await writable.write(
-        JSON.stringify(dados, null, 2)
-      );
-
+      if (!window.kingsFileHandle) return;
+      const writable = await window.kingsFileHandle.createWritable();
+      await writable.write(JSON.stringify(dados, null, 2));
       await writable.close();
-
-      console.log("JSON atualizado");
     } catch (error) {
       console.error("Erro ao salvar arquivo:", error);
     }
@@ -67,22 +45,16 @@ export function VendasScreen({ onBack }) {
 
   const filtrarProdutos = (textoBusca) => {
     setBusca(textoBusca);
-
     if (!textoBusca.trim()) {
       setProdutosFiltrados(produtos);
       return;
     }
-
     const termo = textoBusca.toLowerCase();
-
-    const filtrados = produtos.filter((produto) => {
-      return (
-        produto.Codigo.toLowerCase().includes(termo) ||
-        produto.Produto.toLowerCase().includes(termo) ||
-        produto.Observacao.toLowerCase().includes(termo)
-      );
-    });
-
+    const filtrados = produtos.filter((p) => 
+      p.Codigo.toLowerCase().includes(termo) ||
+      p.Produto.toLowerCase().includes(termo) ||
+      p.Observacao.toLowerCase().includes(termo)
+    );
     setProdutosFiltrados(filtrados);
   };
 
@@ -94,55 +66,30 @@ export function VendasScreen({ onBack }) {
 
   const confirmarVenda = async () => {
     if (!produtoSelecionado) return;
+    const qta = Number(produtoSelecionado.Quantidade);
+    const qtdDesejada = Number(quantidadeVenda);
 
-    const quantidadeAtual = Number(produtoSelecionado.Quantidade);
-
-    const quantidadeDesejada = Number(quantidadeVenda);
-
-    if (quantidadeDesejada <= 0) {
-      alert("Informe uma quantidade válida.");
+    if (qtdDesejada <= 0 || qtdDesejada > qta) {
+      alert("Quantidade inválida ou insuficiente.");
       return;
     }
 
-    if (quantidadeDesejada > quantidadeAtual) {
-      alert("Quantidade insuficiente em estoque.");
-      return;
-    }
+    const novosProdutos = produtos.map((p) => 
+      p.Codigo === produtoSelecionado.Codigo 
+      ? { ...p, Quantidade: Number(p.Quantidade) - qtdDesejada } 
+      : p
+    );
 
-    const novosProdutos = produtos.map((produto) => {
-      if (produto.Codigo === produtoSelecionado.Codigo) {
-        return {
-          ...produto,
-          Quantidade:
-            Number(produto.Quantidade) - quantidadeDesejada,
-        };
-      }
-
-      return produto;
-    });
-
-    // ATUALIZA ESTADO
     setProdutos(novosProdutos);
-
     setProdutosFiltrados(novosProdutos);
-
-    // ATUALIZA CACHE
     atualizarCache(novosProdutos);
-
-    // ATUALIZA JSON FÍSICO
     await salvarNoArquivo(novosProdutos);
-
-    alert("Venda realizada com sucesso!");
-
+    
+    alert("Venda realizada!");
     setPopupVenda(false);
-
-    setProdutoSelecionado(null);
   };
 
-  const valorTotal =
-    produtoSelecionado &&
-    Number(produtoSelecionado.ValorDeVenda) *
-      Number(quantidadeVenda);
+  const valorTotal = produtoSelecionado && Number(produtoSelecionado.ValorDeVenda) * Number(quantidadeVenda);
 
   return (
     <div className="excel-screen">
@@ -150,33 +97,18 @@ export function VendasScreen({ onBack }) {
         <div className="excel-header">
           <div>
             <h2>Sistema de Vendas</h2>
-
-            <p>
-              Visualize o estoque e busque produtos por código, nome ou
-              categoria.
-            </p>
+            <p>Visualize o estoque e realize vendas rápidas.</p>
           </div>
-
-          <button className="btn-outline" onClick={onBack}>
-            ← Voltar
-          </button>
+          <button className="btn-outline" onClick={onBack}>← Voltar</button>
         </div>
 
         <div className="excel-actions">
           <input
+            className="vendas-search-input"
             type="text"
             placeholder="🔍 Buscar por código, produto ou observação..."
             value={busca}
             onChange={(e) => filtrarProdutos(e.target.value)}
-            style={{
-              flex: 1,
-              padding: "12px 16px",
-              background: "var(--input)",
-              border: "1px solid var(--border)",
-              borderRadius: "12px",
-              color: "white",
-              fontSize: "14px",
-            }}
           />
         </div>
 
@@ -187,77 +119,29 @@ export function VendasScreen({ onBack }) {
                 <tr>
                   <th>Código</th>
                   <th>Produto</th>
-                  <th>Quantidade</th>
-                  <th>Valor Compra</th>
-                  <th>Valor Venda</th>
+                  <th>Estoque</th>
+                  <th>Preço</th>
                   <th>Observação</th>
                   <th>Ações</th>
                 </tr>
               </thead>
-
               <tbody>
-                {produtosFiltrados.map((produto, index) => (
-                  <tr key={index}>
+                {produtosFiltrados.map((p, i) => (
+                  <tr key={i}>
+                    <td><input value={p.Codigo} disabled className="codigo-destaque" /></td>
+                    <td><input value={p.Produto} disabled /></td>
                     <td>
-                      <input
-                        value={produto.Codigo}
-                        disabled
-                        style={{
-                          fontWeight: "bold",
-                          color: "var(--accent)",
-                        }}
+                      <input 
+                        value={p.Quantidade} 
+                        disabled 
+                        className="estoque-status" 
+                        style={{ color: p.Quantidade > 0 ? "var(--success)" : "var(--danger)" }}
                       />
                     </td>
-
+                    <td><input value={`R$ ${p.ValorDeVenda}`} disabled className="codigo-destaque" /></td>
+                    <td><input value={p.Observacao} disabled /></td>
                     <td>
-                      <input value={produto.Produto} disabled />
-                    </td>
-
-                    <td>
-                      <input
-                        value={produto.Quantidade}
-                        disabled
-                        style={{
-                          color:
-                            produto.Quantidade > 0
-                              ? "var(--success)"
-                              : "var(--danger)",
-                        }}
-                      />
-                    </td>
-
-                    <td>
-                      <input
-                        value={`R$ ${produto.ValorDeCompra}`}
-                        disabled
-                      />
-                    </td>
-
-                    <td>
-                      <input
-                        value={`R$ ${produto.ValorDeVenda}`}
-                        disabled
-                        style={{ color: "var(--accent)" }}
-                      />
-                    </td>
-
-                    <td>
-                      <input value={produto.Observacao} disabled />
-                    </td>
-
-                    <td>
-                      <button
-                        onClick={() => abrirVenda(produto)}
-                        style={{
-                          padding: "10px 16px",
-                          borderRadius: "10px",
-                          border: "none",
-                          background: "var(--accent)",
-                          color: "white",
-                          cursor: "pointer",
-                          fontWeight: "bold",
-                        }}
-                      >
+                      <button className="btn-vender-acao" onClick={() => abrirVenda(p)}>
                         Vender
                       </button>
                     </td>
@@ -267,151 +151,37 @@ export function VendasScreen({ onBack }) {
             </table>
           </div>
         ) : (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "40px",
-              color: "var(--text-dim)",
-            }}
-          >
-            {produtos.length === 0
-              ? "Nenhum estoque carregado"
-              : "Nenhum produto encontrado"}
-          </div>
+          <div className="empty-state">Nenhum produto encontrado</div>
         )}
 
-        <div
-          style={{
-            marginTop: "20px",
-            padding: "16px",
-            background: "rgba(0, 210, 255, 0.05)",
-            borderRadius: "12px",
-            border: "1px solid var(--border)",
-            color: "var(--text-dim)",
-            fontSize: "13px",
-          }}
-        >
-          <strong>Total de produtos: {produtosFiltrados.length}</strong> de{" "}
-          {produtos.length}
+        <div className="venda-info-footer">
+          <strong>Total exibido: {produtosFiltrados.length}</strong> de {produtos.length} produtos.
         </div>
       </div>
 
       {popupVenda && produtoSelecionado && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.7)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 999,
-          }}
-        >
-          <div
-            style={{
-              width: "400px",
-              background: "var(--card)",
-              padding: "24px",
-              borderRadius: "16px",
-              border: "1px solid var(--border)",
-            }}
-          >
-            <h2 style={{ marginBottom: "10px" }}>
-              Realizar Venda
-            </h2>
-
-            <p
-              style={{
-                marginBottom: "20px",
-                color: "var(--text-dim)",
-              }}
-            >
-              Produto:
-              <strong>
-                {" "}
-                {produtoSelecionado.Produto}
-              </strong>
-            </p>
-
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "12px",
-              }}
-            >
+        <div className="modal-overlay">
+          <div className="venda-modal-content">
+            <h2>Confirmar Venda</h2>
+            <p className="app-sm">Produto: <strong>{produtoSelecionado.Produto}</strong></p>
+            
+            <div className="venda-form-group">
+              <label className="app-sm">Quantidade a vender:</label>
               <input
                 type="number"
                 min={1}
                 max={produtoSelecionado.Quantidade}
                 value={quantidadeVenda}
-                onChange={(e) =>
-                  setQuantidadeVenda(e.target.value)
-                }
-                placeholder="Quantidade"
-                style={{
-                  padding: "12px",
-                  borderRadius: "10px",
-                  border: "1px solid var(--border)",
-                  background: "var(--input)",
-                  color: "white",
-                }}
+                onChange={(e) => setQuantidadeVenda(e.target.value)}
               />
 
-              <div
-                style={{
-                  padding: "12px",
-                  borderRadius: "10px",
-                  background:
-                    "rgba(0, 210, 255, 0.08)",
-                  border: "1px solid var(--border)",
-                }}
-              >
-                <strong>
-                  Total da venda: R${" "}
-                  {valorTotal?.toFixed(2)}
-                </strong>
+              <div className="total-venda-display">
+                <strong>Total: R$ {valorTotal?.toFixed(2)}</strong>
               </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  gap: "10px",
-                  marginTop: "10px",
-                }}
-              >
-                <button
-                  onClick={confirmarVenda}
-                  style={{
-                    flex: 1,
-                    padding: "12px",
-                    border: "none",
-                    borderRadius: "10px",
-                    background: "var(--success)",
-                    color: "white",
-                    fontWeight: "bold",
-                    cursor: "pointer",
-                  }}
-                >
-                  Confirmar Venda
-                </button>
-
-                <button
-                  onClick={() => setPopupVenda(false)}
-                  style={{
-                    flex: 1,
-                    padding: "12px",
-                    border: "none",
-                    borderRadius: "10px",
-                    background: "var(--danger)",
-                    color: "white",
-                    fontWeight: "bold",
-                    cursor: "pointer",
-                  }}
-                >
-                  Cancelar
-                </button>
+              <div className="action-bar">
+                <button className="btn-primary" onClick={confirmarVenda}>Confirmar</button>
+                <button className="btn-delete" onClick={() => setPopupVenda(false)}>Cancelar</button>
               </div>
             </div>
           </div>

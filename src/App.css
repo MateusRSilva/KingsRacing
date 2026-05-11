@@ -547,6 +547,97 @@ input:focus {
   margin-bottom: 10px;
 }
 
+/* --- TELA DE VENDAS --- */
+.vendas-search-input {
+  flex: 1;
+  padding: 12px 16px;
+  background: var(--input);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: white;
+  font-size: 14px;
+  width: 100%;
+}
+
+.codigo-destaque {
+  font-weight: bold;
+  color: var(--accent) !important;
+}
+
+.estoque-status {
+  font-weight: bold;
+}
+
+.venda-info-footer {
+  margin-top: 20px;
+  padding: 16px;
+  background: rgba(0, 210, 255, 0.05);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+/* --- BOTÃO VENDER E POPUP --- */
+.btn-vender-acao {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: none;
+  background: var(--accent);
+  color: #000; /* Melhor contraste no azul */
+  cursor: pointer;
+  font-weight: bold;
+  transition: var(--transition);
+  width: auto;
+}
+
+.btn-vender-acao:hover {
+  filter: brightness(1.2);
+  transform: translateY(-1px);
+}
+
+.venda-modal-content {
+  width: 100%;
+  max-width: 400px;
+  background: var(--card);
+  padding: 24px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+}
+
+.venda-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.total-venda-display {
+  padding: 12px;
+  border-radius: 10px;
+  background: rgba(0, 210, 255, 0.08);
+  border: 1px solid var(--border);
+  text-align: center;
+}
+
+/* --- RESPONSIVIDADE ESPECÍFICA PARA VENDAS --- */
+@media (max-width: 768px) {
+  .btn-vender-acao {
+    width: 100%; /* Botão ocupa a largura toda no mobile dentro da tabela */
+    padding: 12px;
+  }
+
+  .venda-modal-content {
+    width: 90%;
+    padding: 20px;
+  }
+
+  /* Garante que a tabela não quebre o layout */
+  .excel-table td:last-child {
+    min-width: 120px;
+  }
+}
+
 /* --- O RESUMO (INVOICE STYLE) --- */
 .resumo-container {
   margin-top: 50px;
@@ -1116,4 +1207,5 @@ img {
   .modal-content {
     padding: 16px;
   }
+  
 }
