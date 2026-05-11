@@ -17,6 +17,9 @@ export function EstoqueScreen({ onBack }) {
   const [estoqueData, setEstoqueData] = useState([]);
   const [jsonFileName, setJsonFileName] = useState("estoque.json");
 
+  // File System Access API
+  const [fileHandle, setFileHandle] = useState(null);
+
   useEffect(() => {
     const cache = localStorage.getItem(CACHE_KEY);
 
@@ -49,38 +52,68 @@ export function EstoqueScreen({ onBack }) {
     return `P${String(ultimoIndex).padStart(3, "0")}`;
   };
 
-  const criarNovoEstoque = () => {
-    setEstoqueData(DEFAULT_TEMPLATE);
-    setJsonFileName("estoque.json");
-
-    persistCache(DEFAULT_TEMPLATE, "estoque.json");
-
-    baixarJSON(DEFAULT_TEMPLATE, "estoque.json");
-  };
-
-  const baixarJSON = (data, fileName) => {
-    const blob = new Blob([JSON.stringify(data, null, 2)], {
-      type: "application/json",
-    });
-
-    const url = URL.createObjectURL(blob);
-
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = fileName;
-    link.click();
-
-    URL.revokeObjectURL(url);
-  };
-
-  const carregarJSON = async (event) => {
-    const file = event.target.files?.[0];
-
-    if (!file) return;
-
-    const text = await file.text();
+  const salvarDiretoNoArquivo = async (data) => {
+    if (!fileHandle) return false;
 
     try {
+      const writable = await fileHandle.createWritable();
+
+      await writable.write(JSON.stringify(data, null, 2));
+
+      await writable.close();
+
+      return true;
+    } catch (error) {
+      console.error("Erro ao salvar:", error);
+      return false;
+    }
+  };
+
+  const criarNovoEstoque = async () => {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: "estoque.json",
+        types: [
+          {
+            description: "Arquivo JSON",
+            accept: {
+              "application/json": [".json"],
+            },
+          },
+        ],
+      });
+
+      setFileHandle(handle);
+
+      setEstoqueData(DEFAULT_TEMPLATE);
+
+      setJsonFileName("estoque.json");
+
+      persistCache(DEFAULT_TEMPLATE, "estoque.json");
+
+      await salvarDiretoNoArquivo(DEFAULT_TEMPLATE);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const carregarJSON = async () => {
+    try {
+      const [handle] = await window.showOpenFilePicker({
+        types: [
+          {
+            description: "Arquivo JSON",
+            accept: {
+              "application/json": [".json"],
+            },
+          },
+        ],
+      });
+
+      const file = await handle.getFile();
+
+      const text = await file.text();
+
       const jsonData = JSON.parse(text);
 
       if (!Array.isArray(jsonData)) {
@@ -88,28 +121,33 @@ export function EstoqueScreen({ onBack }) {
         return;
       }
 
-      const fileName = file.name.replace(/\.json$/, "_editado.json");
+      setFileHandle(handle);
 
       setEstoqueData(jsonData);
-      setJsonFileName(fileName);
 
-      persistCache(jsonData, fileName);
-    } catch {
-      alert("Arquivo JSON inválido.");
+      setJsonFileName(file.name);
+
+      persistCache(jsonData, file.name);
+    } catch (error) {
+      console.error(error);
     }
   };
 
-  const salvarJSONAlterado = () => {
-  const confirmar = window.confirm(
-    "Tem certeza que deseja salvar as alterações?"
-  );
+  const salvarJSONAlterado = async () => {
+    const confirmar = window.confirm(
+      "Tem certeza que deseja salvar as alterações?"
+    );
 
-  if (confirmar) {
+    if (!confirmar) return;
+
     persistCache(estoqueData, jsonFileName);
 
-    baixarJSON(estoqueData, jsonFileName);
-  }
-};
+    const salvou = await salvarDiretoNoArquivo(estoqueData);
+
+    if (!salvou) {
+      alert("Erro ao salvar arquivo.");
+    }
+  };
 
   const atualizarLinha = (rowIndex, key, value) => {
     const updated = [...estoqueData];
@@ -172,15 +210,12 @@ export function EstoqueScreen({ onBack }) {
             Gerar JSON
           </button>
 
-          <label className="excel-upload-label">
+          <button
+            className="btn-primary"
+            onClick={carregarJSON}
+          >
             Carregar JSON
-
-            <input
-              type="file"
-              accept=".json"
-              onChange={carregarJSON}
-            />
-          </label>
+          </button>
 
           <button
             className="btn-primary"
