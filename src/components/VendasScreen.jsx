@@ -2,6 +2,9 @@ import { useState, useEffect } from "react";
 
 const CACHE_KEY = "kingsracing_estoque_cache";
 
+// HANDLE GLOBAL
+window.kingsFileHandle = window.kingsFileHandle || null;
+
 export function VendasScreen({ onBack }) {
   const [produtos, setProdutos] = useState([]);
   const [busca, setBusca] = useState("");
@@ -39,6 +42,24 @@ export function VendasScreen({ onBack }) {
     );
   };
 
+  // NOVO
+  const salvarNoArquivo = async (dados) => {
+    try {
+      if (!window.kingsFileHandle) return;
+
+      const writable =
+        await window.kingsFileHandle.createWritable();
+
+      await writable.write(
+        JSON.stringify(dados, null, 2)
+      );
+
+      await writable.close();
+    } catch (error) {
+      console.error("Erro ao salvar arquivo:", error);
+    }
+  };
+
   const filtrarProdutos = (textoBusca) => {
     setBusca(textoBusca);
 
@@ -66,10 +87,11 @@ export function VendasScreen({ onBack }) {
     setPopupVenda(true);
   };
 
-  const confirmarVenda = () => {
+  const confirmarVenda = async () => {
     if (!produtoSelecionado) return;
 
     const quantidadeAtual = Number(produtoSelecionado.Quantidade);
+
     const quantidadeDesejada = Number(quantidadeVenda);
 
     if (quantidadeDesejada <= 0) {
@@ -86,7 +108,8 @@ export function VendasScreen({ onBack }) {
       if (produto.Codigo === produtoSelecionado.Codigo) {
         return {
           ...produto,
-          Quantidade: quantidadeAtual - quantidadeDesejada,
+          Quantidade:
+            Number(produto.Quantidade) - quantidadeDesejada,
         };
       }
 
@@ -94,19 +117,25 @@ export function VendasScreen({ onBack }) {
     });
 
     setProdutos(novosProdutos);
+
     setProdutosFiltrados(novosProdutos);
 
     atualizarCache(novosProdutos);
 
+    // SALVA DIRETO NO JSON
+    await salvarNoArquivo(novosProdutos);
+
     alert("Venda realizada com sucesso!");
 
     setPopupVenda(false);
+
     setProdutoSelecionado(null);
   };
 
   const valorTotal =
     produtoSelecionado &&
-    Number(produtoSelecionado.ValorDeVenda) * Number(quantidadeVenda);
+    Number(produtoSelecionado.ValorDeVenda) *
+      Number(quantidadeVenda);
 
   return (
     <div className="excel-screen">
@@ -260,7 +289,6 @@ export function VendasScreen({ onBack }) {
         </div>
       </div>
 
-      {/* POPUP VENDA */}
       {popupVenda && produtoSelecionado && (
         <div
           style={{
@@ -282,10 +310,21 @@ export function VendasScreen({ onBack }) {
               border: "1px solid var(--border)",
             }}
           >
-            <h2 style={{ marginBottom: "10px" }}>Realizar Venda</h2>
+            <h2 style={{ marginBottom: "10px" }}>
+              Realizar Venda
+            </h2>
 
-            <p style={{ marginBottom: "20px", color: "var(--text-dim)" }}>
-              Produto: <strong>{produtoSelecionado.Produto}</strong>
+            <p
+              style={{
+                marginBottom: "20px",
+                color: "var(--text-dim)",
+              }}
+            >
+              Produto:
+              <strong>
+                {" "}
+                {produtoSelecionado.Produto}
+              </strong>
             </p>
 
             <div
@@ -300,7 +339,9 @@ export function VendasScreen({ onBack }) {
                 min={1}
                 max={produtoSelecionado.Quantidade}
                 value={quantidadeVenda}
-                onChange={(e) => setQuantidadeVenda(e.target.value)}
+                onChange={(e) =>
+                  setQuantidadeVenda(e.target.value)
+                }
                 placeholder="Quantidade"
                 style={{
                   padding: "12px",
@@ -315,12 +356,14 @@ export function VendasScreen({ onBack }) {
                 style={{
                   padding: "12px",
                   borderRadius: "10px",
-                  background: "rgba(0, 210, 255, 0.08)",
+                  background:
+                    "rgba(0, 210, 255, 0.08)",
                   border: "1px solid var(--border)",
                 }}
               >
                 <strong>
-                  Total da venda: R$ {valorTotal?.toFixed(2)}
+                  Total da venda: R${" "}
+                  {valorTotal?.toFixed(2)}
                 </strong>
               </div>
 
