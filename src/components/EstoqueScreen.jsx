@@ -4,9 +4,9 @@ const DEFAULT_TEMPLATE = [
   {
     Codigo: "P001",
     Produto: "",
-    Quantidade: 0,
-    PrecoCompra: 0,
-    PrecoVenda: 0,
+    Quantidade: "",
+    PrecoCompra: "",
+    PrecoVenda: "",
     Observacao: "",
   },
 ];
@@ -382,9 +382,9 @@ export function EstoqueScreen({ onBack }) {
     const novoProduto = {
       Codigo: gerarCodigo(),
       Produto: "",
-      Quantidade: 0,
-      PrecoCompra: 0,
-      PrecoVenda: 0,
+      Quantidade: "",
+      PrecoCompra: "",
+      PrecoVenda: "",
       Observacao: "",
     };
 
