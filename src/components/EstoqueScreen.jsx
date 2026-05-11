@@ -21,17 +21,22 @@ export function EstoqueScreen({ onBack }) {
   const [jsonFileName, setJsonFileName] =
     useState("estoque.json");
 
-  // HANDLE LOCAL
-  const [fileHandle, setFileHandle] = useState(null);
+  const [fileHandle, setFileHandle] =
+    useState(null);
 
   useEffect(() => {
-    const cache = localStorage.getItem(CACHE_KEY);
+    const cache =
+      localStorage.getItem(CACHE_KEY);
 
     if (cache) {
       try {
-        const { data, fileName } = JSON.parse(cache);
+        const { data, fileName } =
+          JSON.parse(cache);
 
-        if (Array.isArray(data) && data.length > 0) {
+        if (
+          Array.isArray(data) &&
+          data.length > 0
+        ) {
           setEstoqueData(data);
 
           setJsonFileName(
@@ -39,12 +44,17 @@ export function EstoqueScreen({ onBack }) {
           );
         }
       } catch {
-        localStorage.removeItem(CACHE_KEY);
+        localStorage.removeItem(
+          CACHE_KEY
+        );
       }
     }
   }, []);
 
-  const persistCache = (data, fileName) => {
+  const persistCache = (
+    data,
+    fileName
+  ) => {
     localStorage.setItem(
       CACHE_KEY,
       JSON.stringify({
@@ -55,97 +65,149 @@ export function EstoqueScreen({ onBack }) {
   };
 
   const gerarCodigo = () => {
-    const ultimoIndex = estoqueData.length + 1;
+    const ultimoIndex =
+      estoqueData.length + 1;
 
-    return `P${String(ultimoIndex).padStart(3, "0")}`;
+    return `P${String(
+      ultimoIndex
+    ).padStart(3, "0")}`;
   };
 
-  // FALLBACK MOBILE + DESKTOP
-  const salvarDiretoNoArquivo = async (
-    data,
-    customHandle = null
-  ) => {
-    try {
-      const handle = customHandle || fileHandle;
+  // DESKTOP = SALVA DIRETO
+  // MOBILE = SOMENTE CACHE
+  const salvarDiretoNoArquivo =
+    async (
+      data,
+      customHandle = null
+    ) => {
+      try {
+        const handle =
+          customHandle || fileHandle;
 
-      // DESKTOP
-      if (
-        handle &&
-        window.showSaveFilePicker
-      ) {
-        const writable =
-          await handle.createWritable();
+        // DESKTOP
+        if (
+          handle &&
+          window.showSaveFilePicker
+        ) {
+          const writable =
+            await handle.createWritable();
 
-        await writable.write(
-          JSON.stringify(data, null, 2)
+          await writable.write(
+            JSON.stringify(
+              data,
+              null,
+              2
+            )
+          );
+
+          await writable.close();
+
+          return true;
+        }
+
+        // MOBILE
+        persistCache(
+          data,
+          jsonFileName
         );
 
-        await writable.close();
-
         return true;
+      } catch (error) {
+        console.error(
+          "Erro ao salvar:",
+          error
+        );
+
+        return false;
       }
+    };
 
-      // MOBILE FALLBACK
-      const blob = new Blob(
-        [JSON.stringify(data, null, 2)],
-        {
-          type: "application/json",
-        }
-      );
+  // EXPORTAR BACKUP
+  const baixarBackupJSON = (
+    data
+  ) => {
+    const blob = new Blob(
+      [
+        JSON.stringify(
+          data,
+          null,
+          2
+        ),
+      ],
+      {
+        type: "application/json",
+      }
+    );
 
-      const url =
-        URL.createObjectURL(blob);
+    const url =
+      URL.createObjectURL(blob);
 
-      const link =
-        document.createElement("a");
+    const link =
+      document.createElement("a");
 
-      link.href = url;
+    link.href = url;
 
-      link.download =
-        jsonFileName || "estoque.json";
+    link.download =
+      jsonFileName ||
+      "estoque.json";
 
-      link.click();
+    link.click();
 
-      URL.revokeObjectURL(url);
-
-      return true;
-    } catch (error) {
-      console.error(
-        "Erro ao salvar:",
-        error
-      );
-
-      return false;
-    }
+    URL.revokeObjectURL(url);
   };
 
-  const criarNovoEstoque = async () => {
-    try {
-      // DESKTOP
-      if (
-        window.showSaveFilePicker
-      ) {
-        const handle =
-          await window.showSaveFilePicker({
-            suggestedName:
-              "estoque.json",
-            types: [
+  const criarNovoEstoque =
+    async () => {
+      try {
+        // DESKTOP
+        if (
+          window.showSaveFilePicker
+        ) {
+          const handle =
+            await window.showSaveFilePicker(
               {
-                description:
-                  "Arquivo JSON",
-                accept: {
-                  "application/json":
-                    [".json"],
-                },
-              },
-            ],
-          });
+                suggestedName:
+                  "estoque.json",
+                types: [
+                  {
+                    description:
+                      "Arquivo JSON",
+                    accept: {
+                      "application/json":
+                        [".json"],
+                    },
+                  },
+                ],
+              }
+            );
 
-        window.kingsFileHandle =
-          handle;
+          window.kingsFileHandle =
+            handle;
 
-        setFileHandle(handle);
+          setFileHandle(handle);
 
+          setEstoqueData(
+            DEFAULT_TEMPLATE
+          );
+
+          setJsonFileName(
+            "estoque.json"
+          );
+
+          persistCache(
+            DEFAULT_TEMPLATE,
+            "estoque.json"
+          );
+
+          await salvarDiretoNoArquivo(
+            DEFAULT_TEMPLATE,
+            handle
+          );
+
+          return;
+        }
+
+        // MOBILE
         setEstoqueData(
           DEFAULT_TEMPLATE
         );
@@ -158,36 +220,10 @@ export function EstoqueScreen({ onBack }) {
           DEFAULT_TEMPLATE,
           "estoque.json"
         );
-
-        await salvarDiretoNoArquivo(
-          DEFAULT_TEMPLATE,
-          handle
-        );
-
-        return;
+      } catch (error) {
+        console.error(error);
       }
-
-      // MOBILE
-      setEstoqueData(
-        DEFAULT_TEMPLATE
-      );
-
-      setJsonFileName(
-        "estoque.json"
-      );
-
-      persistCache(
-        DEFAULT_TEMPLATE,
-        "estoque.json"
-      );
-
-      await salvarDiretoNoArquivo(
-        DEFAULT_TEMPLATE
-      );
-    } catch (error) {
-      console.error(error);
-    }
-  };
+    };
 
   const carregarJSON = async (
     event = null
@@ -198,18 +234,20 @@ export function EstoqueScreen({ onBack }) {
         window.showOpenFilePicker
       ) {
         const [handle] =
-          await window.showOpenFilePicker({
-            types: [
-              {
-                description:
-                  "Arquivo JSON",
-                accept: {
-                  "application/json":
-                    [".json"],
+          await window.showOpenFilePicker(
+            {
+              types: [
+                {
+                  description:
+                    "Arquivo JSON",
+                  accept: {
+                    "application/json":
+                      [".json"],
+                  },
                 },
-              },
-            ],
-          });
+              ],
+            }
+          );
 
         const file =
           await handle.getFile();
@@ -221,7 +259,9 @@ export function EstoqueScreen({ onBack }) {
           JSON.parse(text);
 
         if (
-          !Array.isArray(jsonData)
+          !Array.isArray(
+            jsonData
+          )
         ) {
           alert(
             "O JSON precisa ser um array."
@@ -235,9 +275,13 @@ export function EstoqueScreen({ onBack }) {
 
         setFileHandle(handle);
 
-        setEstoqueData(jsonData);
+        setEstoqueData(
+          jsonData
+        );
 
-        setJsonFileName(file.name);
+        setJsonFileName(
+          file.name
+        );
 
         persistCache(
           jsonData,
@@ -260,7 +304,9 @@ export function EstoqueScreen({ onBack }) {
         JSON.parse(text);
 
       if (
-        !Array.isArray(jsonData)
+        !Array.isArray(
+          jsonData
+        )
       ) {
         alert(
           "O JSON precisa ser um array."
@@ -271,7 +317,9 @@ export function EstoqueScreen({ onBack }) {
 
       setEstoqueData(jsonData);
 
-      setJsonFileName(file.name);
+      setJsonFileName(
+        file.name
+      );
 
       persistCache(
         jsonData,
@@ -405,7 +453,6 @@ export function EstoqueScreen({ onBack }) {
             Gerar JSON
           </button>
 
-          {/* DESKTOP */}
           {window.showOpenFilePicker ? (
             <button
               className="btn-primary"
@@ -416,7 +463,6 @@ export function EstoqueScreen({ onBack }) {
               Carregar JSON
             </button>
           ) : (
-            // MOBILE
             <label className="btn-primary">
               Carregar JSON
 
@@ -445,6 +491,20 @@ export function EstoqueScreen({ onBack }) {
 
           <button
             className="btn-primary"
+            onClick={() =>
+              baixarBackupJSON(
+                estoqueData
+              )
+            }
+            disabled={
+              !estoqueData.length
+            }
+          >
+            Exportar Backup
+          </button>
+
+          <button
+            className="btn-primary"
             onClick={
               adicionarProduto
             }
@@ -461,11 +521,15 @@ export function EstoqueScreen({ onBack }) {
                 <tr>
                   {Object.keys(
                     estoqueData[0]
-                  ).map((column) => (
-                    <th key={column}>
-                      {column}
-                    </th>
-                  ))}
+                  ).map(
+                    (column) => (
+                      <th
+                        key={column}
+                      >
+                        {column}
+                      </th>
+                    )
+                  )}
 
                   <th>
                     Ações
