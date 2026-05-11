@@ -93,8 +93,6 @@ export function DocumentosModal({ open, onClose, cliente }) {
                         ⚠️ Gerar Termo de Isenção de Peças
                     </button>
 
-                    <hr />
-
                     <button className="docs-btn-close" onClick={onClose}>
                         Fechar
                     </button>

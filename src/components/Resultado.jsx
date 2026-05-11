@@ -1,5 +1,5 @@
 import jsPDF from "jspdf";
-import logo from "./assets/logo.png";
+import logo from "../assets/logo.png";
 
 export function Resultado({ resultado, cliente, desconto, config }) {
   if (!resultado.length) return null;
