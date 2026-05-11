@@ -489,19 +489,22 @@ export function EstoqueScreen({ onBack }) {
             Salvar Alterações
           </button>
 
-          <button
-            className="btn-primary"
-            onClick={() =>
-              baixarBackupJSON(
-                estoqueData
-              )
-            }
-            disabled={
-              !estoqueData.length
-            }
-          >
-            Exportar Backup
-          </button>
+          {/* SOMENTE MOBILE */}
+          {!window.showSaveFilePicker && (
+            <button
+              className="btn-primary"
+              onClick={() =>
+                baixarBackupJSON(
+                  estoqueData
+                )
+              }
+              disabled={
+                !estoqueData.length
+              }
+            >
+              Exportar Backup
+            </button>
+          )}
 
           <button
             className="btn-primary"
