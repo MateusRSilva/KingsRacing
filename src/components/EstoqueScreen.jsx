@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const DEFAULT_TEMPLATE = [
   {
@@ -11,79 +11,76 @@ const DEFAULT_TEMPLATE = [
   },
 ];
 
+const CACHE_KEY = "kingsracing_estoque_cache";
+
 export function EstoqueScreen({ onBack }) {
   const [estoqueData, setEstoqueData] = useState([]);
-  const [fileHandle, setFileHandle] = useState(null);
+  const [jsonFileName, setJsonFileName] = useState("estoque.json");
+
+  useEffect(() => {
+    const cache = localStorage.getItem(CACHE_KEY);
+
+    if (cache) {
+      try {
+        const { data, fileName } = JSON.parse(cache);
+
+        if (Array.isArray(data) && data.length > 0) {
+          setEstoqueData(data);
+          setJsonFileName(fileName || "estoque.json");
+        }
+      } catch {
+        localStorage.removeItem(CACHE_KEY);
+      }
+    }
+  }, []);
+
+  const persistCache = (data, fileName) => {
+    localStorage.setItem(
+      CACHE_KEY,
+      JSON.stringify({
+        data,
+        fileName,
+      })
+    );
+  };
 
   const gerarCodigo = () => {
     const ultimoIndex = estoqueData.length + 1;
     return `P${String(ultimoIndex).padStart(3, "0")}`;
   };
 
-  const salvarDiretoNoArquivo = async (
-    data = estoqueData,
-    handle = fileHandle
-  ) => {
-    try {
-      if (!handle) {
-        alert("Nenhum arquivo carregado.");
-        return;
-      }
+  const criarNovoEstoque = () => {
+    setEstoqueData(DEFAULT_TEMPLATE);
+    setJsonFileName("estoque.json");
 
-      const writable = await handle.createWritable();
+    persistCache(DEFAULT_TEMPLATE, "estoque.json");
 
-      await writable.write(JSON.stringify(data, null, 2));
-
-      await writable.close();
-
-      alert("Arquivo salvo com sucesso!");
-    } catch (err) {
-      console.log(err);
-      alert("Erro ao salvar arquivo.");
-    }
+    baixarJSON(DEFAULT_TEMPLATE, "estoque.json");
   };
 
-  const criarNovoEstoque = async () => {
-    try {
-      const handle = await window.showSaveFilePicker({
-        suggestedName: "estoque.json",
-        types: [
-          {
-            description: "Arquivo JSON",
-            accept: {
-              "application/json": [".json"],
-            },
-          },
-        ],
-      });
+  const baixarJSON = (data, fileName) => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: "application/json",
+    });
 
-      setFileHandle(handle);
+    const url = URL.createObjectURL(blob);
 
-      setEstoqueData(DEFAULT_TEMPLATE);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    link.click();
 
-      await salvarDiretoNoArquivo(DEFAULT_TEMPLATE, handle);
-    } catch (err) {
-      console.log(err);
-    }
+    URL.revokeObjectURL(url);
   };
 
-  const carregarJSON = async () => {
+  const carregarJSON = async (event) => {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    const text = await file.text();
+
     try {
-      const [handle] = await window.showOpenFilePicker({
-        types: [
-          {
-            description: "Arquivo JSON",
-            accept: {
-              "application/json": [".json"],
-            },
-          },
-        ],
-      });
-
-      const file = await handle.getFile();
-
-      const text = await file.text();
-
       const jsonData = JSON.parse(text);
 
       if (!Array.isArray(jsonData)) {
@@ -91,36 +88,43 @@ export function EstoqueScreen({ onBack }) {
         return;
       }
 
-      setEstoqueData(jsonData);
+      const fileName = file.name.replace(/\.json$/, "_editado.json");
 
-      setFileHandle(handle);
-    } catch (err) {
-      console.log(err);
-      alert("Erro ao carregar JSON.");
+      setEstoqueData(jsonData);
+      setJsonFileName(fileName);
+
+      persistCache(jsonData, fileName);
+    } catch {
+      alert("Arquivo JSON inválido.");
     }
   };
 
-  const atualizarLinha = async (rowIndex, key, value) => {
+  const salvarJSONAlterado = () => {
+  const confirmar = window.confirm(
+    "Tem certeza que deseja salvar as alterações?"
+  );
+
+  if (confirmar) {
+    persistCache(estoqueData, jsonFileName);
+
+    baixarJSON(estoqueData, jsonFileName);
+  }
+};
+
+  const atualizarLinha = (rowIndex, key, value) => {
     const updated = [...estoqueData];
 
     updated[rowIndex] = {
       ...updated[rowIndex],
-      [key]:
-        key === "Quantidade" ||
-        key === "ValorDeCompra" ||
-        key === "ValorDeVenda"
-          ? Number(value)
-          : value,
+      [key]: value,
     };
 
     setEstoqueData(updated);
 
-    if (fileHandle) {
-      await salvarDiretoNoArquivo(updated, fileHandle);
-    }
+    persistCache(updated, jsonFileName);
   };
 
-  const adicionarProduto = async () => {
+  const adicionarProduto = () => {
     const novoProduto = {
       Codigo: gerarCodigo(),
       Produto: "",
@@ -134,19 +138,15 @@ export function EstoqueScreen({ onBack }) {
 
     setEstoqueData(updated);
 
-    if (fileHandle) {
-      await salvarDiretoNoArquivo(updated, fileHandle);
-    }
+    persistCache(updated, jsonFileName);
   };
 
-  const removerProduto = async (index) => {
+  const removerProduto = (index) => {
     const updated = estoqueData.filter((_, i) => i !== index);
 
     setEstoqueData(updated);
 
-    if (fileHandle) {
-      await salvarDiretoNoArquivo(updated, fileHandle);
-    }
+    persistCache(updated, jsonFileName);
   };
 
   return (
@@ -168,23 +168,23 @@ export function EstoqueScreen({ onBack }) {
         </div>
 
         <div className="excel-actions">
-          <button
-            className="btn-primary"
-            onClick={criarNovoEstoque}
-          >
+          <button className="btn-primary" onClick={criarNovoEstoque}>
             Gerar JSON
           </button>
 
-          <button
-            className="btn-primary"
-            onClick={carregarJSON}
-          >
+          <label className="excel-upload-label">
             Carregar JSON
-          </button>
+
+            <input
+              type="file"
+              accept=".json"
+              onChange={carregarJSON}
+            />
+          </label>
 
           <button
             className="btn-primary"
-            onClick={() => salvarDiretoNoArquivo()}
+            onClick={salvarJSONAlterado}
             disabled={!estoqueData.length}
           >
             Salvar Alterações
@@ -193,7 +193,6 @@ export function EstoqueScreen({ onBack }) {
           <button
             className="btn-primary"
             onClick={adicionarProduto}
-            disabled={!fileHandle}
           >
             + Adicionar Produto
           </button>
@@ -220,13 +219,6 @@ export function EstoqueScreen({ onBack }) {
                         <input
                           value={value}
                           disabled={key === "Codigo"}
-                          type={
-                            key === "Quantidade" ||
-                            key === "ValorDeCompra" ||
-                            key === "ValorDeVenda"
-                              ? "number"
-                              : "text"
-                          }
                           onChange={(event) =>
                             atualizarLinha(
                               rowIndex,
