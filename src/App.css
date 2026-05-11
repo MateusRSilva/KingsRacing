@@ -588,6 +588,7 @@ input:focus {
   cursor: pointer;
   font-weight: bold;
   transition: var(--transition);
+  white-space: nowrap;
   width: auto;
 }
 
