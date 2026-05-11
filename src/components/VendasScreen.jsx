@@ -89,7 +89,7 @@ export function VendasScreen({ onBack }) {
     setPopupVenda(false);
   };
 
-  const valorTotal = produtoSelecionado && Number(produtoSelecionado.ValorDeVenda) * Number(quantidadeVenda);
+   const valorTotal = produtoSelecionado && Number(produtoSelecionado.PrecoVenda) * Number(quantidadeVenda);
 
   return (
     <div className="excel-screen">
@@ -138,7 +138,7 @@ export function VendasScreen({ onBack }) {
                         style={{ color: p.Quantidade > 0 ? "var(--success)" : "var(--danger)" }}
                       />
                     </td>
-                    <td><input value={`R$ ${p.ValorDeVenda}`} disabled className="codigo-destaque" /></td>
+                    <td><input value={`R$ ${p.PrecoVenda || 0}`} disabled className="codigo-destaque" /></td>
                     <td><input value={p.Observacao} disabled /></td>
                     <td>
                       <button className="btn-vender-acao" onClick={() => abrirVenda(p)}>
