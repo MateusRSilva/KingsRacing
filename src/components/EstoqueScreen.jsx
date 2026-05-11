@@ -18,9 +18,10 @@ window.kingsFileHandle = window.kingsFileHandle || null;
 
 export function EstoqueScreen({ onBack }) {
   const [estoqueData, setEstoqueData] = useState([]);
-  const [jsonFileName, setJsonFileName] = useState("estoque.json");
+  const [jsonFileName, setJsonFileName] =
+    useState("estoque.json");
 
-  // File System Access API
+  // HANDLE LOCAL
   const [fileHandle, setFileHandle] = useState(null);
 
   useEffect(() => {
@@ -32,7 +33,10 @@ export function EstoqueScreen({ onBack }) {
 
         if (Array.isArray(data) && data.length > 0) {
           setEstoqueData(data);
-          setJsonFileName(fileName || "estoque.json");
+
+          setJsonFileName(
+            fileName || "estoque.json"
+          );
         }
       } catch {
         localStorage.removeItem(CACHE_KEY);
@@ -56,26 +60,60 @@ export function EstoqueScreen({ onBack }) {
     return `P${String(ultimoIndex).padStart(3, "0")}`;
   };
 
+  // FALLBACK MOBILE + DESKTOP
   const salvarDiretoNoArquivo = async (
     data,
     customHandle = null
   ) => {
-    const handle = customHandle || fileHandle;
-
-    if (!handle) return false;
-
     try {
-      const writable = await handle.createWritable();
+      const handle = customHandle || fileHandle;
 
-      await writable.write(
-        JSON.stringify(data, null, 2)
+      // DESKTOP
+      if (
+        handle &&
+        window.showSaveFilePicker
+      ) {
+        const writable =
+          await handle.createWritable();
+
+        await writable.write(
+          JSON.stringify(data, null, 2)
+        );
+
+        await writable.close();
+
+        return true;
+      }
+
+      // MOBILE FALLBACK
+      const blob = new Blob(
+        [JSON.stringify(data, null, 2)],
+        {
+          type: "application/json",
+        }
       );
 
-      await writable.close();
+      const url =
+        URL.createObjectURL(blob);
+
+      const link =
+        document.createElement("a");
+
+      link.href = url;
+
+      link.download =
+        jsonFileName || "estoque.json";
+
+      link.click();
+
+      URL.revokeObjectURL(url);
 
       return true;
     } catch (error) {
-      console.error("Erro ao salvar:", error);
+      console.error(
+        "Erro ao salvar:",
+        error
+      );
 
       return false;
     }
@@ -83,98 +121,201 @@ export function EstoqueScreen({ onBack }) {
 
   const criarNovoEstoque = async () => {
     try {
-      const handle = await window.showSaveFilePicker({
-        suggestedName: "estoque.json",
-        types: [
-          {
-            description: "Arquivo JSON",
-            accept: {
-              "application/json": [".json"],
-            },
-          },
-        ],
-      });
+      // DESKTOP
+      if (
+        window.showSaveFilePicker
+      ) {
+        const handle =
+          await window.showSaveFilePicker({
+            suggestedName:
+              "estoque.json",
+            types: [
+              {
+                description:
+                  "Arquivo JSON",
+                accept: {
+                  "application/json":
+                    [".json"],
+                },
+              },
+            ],
+          });
 
-      // SALVA GLOBALMENTE
-      window.kingsFileHandle = handle;
+        window.kingsFileHandle =
+          handle;
 
-      setFileHandle(handle);
+        setFileHandle(handle);
 
-      setEstoqueData(DEFAULT_TEMPLATE);
+        setEstoqueData(
+          DEFAULT_TEMPLATE
+        );
 
-      setJsonFileName("estoque.json");
+        setJsonFileName(
+          "estoque.json"
+        );
 
-      persistCache(DEFAULT_TEMPLATE, "estoque.json");
+        persistCache(
+          DEFAULT_TEMPLATE,
+          "estoque.json"
+        );
 
-      // USA O HANDLE DIRETAMENTE
-      await salvarDiretoNoArquivo(
+        await salvarDiretoNoArquivo(
+          DEFAULT_TEMPLATE,
+          handle
+        );
+
+        return;
+      }
+
+      // MOBILE
+      setEstoqueData(
+        DEFAULT_TEMPLATE
+      );
+
+      setJsonFileName(
+        "estoque.json"
+      );
+
+      persistCache(
         DEFAULT_TEMPLATE,
-        handle
+        "estoque.json"
+      );
+
+      await salvarDiretoNoArquivo(
+        DEFAULT_TEMPLATE
       );
     } catch (error) {
       console.error(error);
     }
   };
 
-  const carregarJSON = async () => {
+  const carregarJSON = async (
+    event = null
+  ) => {
     try {
-      const [handle] = await window.showOpenFilePicker({
-        types: [
-          {
-            description: "Arquivo JSON",
-            accept: {
-              "application/json": [".json"],
-            },
-          },
-        ],
-      });
+      // DESKTOP
+      if (
+        window.showOpenFilePicker
+      ) {
+        const [handle] =
+          await window.showOpenFilePicker({
+            types: [
+              {
+                description:
+                  "Arquivo JSON",
+                accept: {
+                  "application/json":
+                    [".json"],
+                },
+              },
+            ],
+          });
 
-      const file = await handle.getFile();
+        const file =
+          await handle.getFile();
 
-      const text = await file.text();
+        const text =
+          await file.text();
 
-      const jsonData = JSON.parse(text);
+        const jsonData =
+          JSON.parse(text);
 
-      if (!Array.isArray(jsonData)) {
-        alert("O JSON precisa ser um array.");
+        if (
+          !Array.isArray(jsonData)
+        ) {
+          alert(
+            "O JSON precisa ser um array."
+          );
+
+          return;
+        }
+
+        window.kingsFileHandle =
+          handle;
+
+        setFileHandle(handle);
+
+        setEstoqueData(jsonData);
+
+        setJsonFileName(file.name);
+
+        persistCache(
+          jsonData,
+          file.name
+        );
+
         return;
       }
 
-      // SALVA GLOBALMENTE
-      window.kingsFileHandle = handle;
+      // MOBILE
+      const file =
+        event.target.files?.[0];
 
-      setFileHandle(handle);
+      if (!file) return;
+
+      const text =
+        await file.text();
+
+      const jsonData =
+        JSON.parse(text);
+
+      if (
+        !Array.isArray(jsonData)
+      ) {
+        alert(
+          "O JSON precisa ser um array."
+        );
+
+        return;
+      }
 
       setEstoqueData(jsonData);
 
       setJsonFileName(file.name);
 
-      persistCache(jsonData, file.name);
+      persistCache(
+        jsonData,
+        file.name
+      );
     } catch (error) {
       console.error(error);
     }
   };
 
-  const salvarJSONAlterado = async () => {
-    const confirmar = window.confirm(
-      "Tem certeza que deseja salvar as alterações?"
-    );
+  const salvarJSONAlterado =
+    async () => {
+      const confirmar =
+        window.confirm(
+          "Tem certeza que deseja salvar as alterações?"
+        );
 
-    if (!confirmar) return;
+      if (!confirmar) return;
 
-    persistCache(estoqueData, jsonFileName);
+      persistCache(
+        estoqueData,
+        jsonFileName
+      );
 
-    const salvou = await salvarDiretoNoArquivo(
-      estoqueData
-    );
+      const salvou =
+        await salvarDiretoNoArquivo(
+          estoqueData
+        );
 
-    if (!salvou) {
-      alert("Erro ao salvar arquivo.");
-    }
-  };
+      if (!salvou) {
+        alert(
+          "Erro ao salvar arquivo."
+        );
+      }
+    };
 
-  const atualizarLinha = (rowIndex, key, value) => {
-    const updated = [...estoqueData];
+  const atualizarLinha = (
+    rowIndex,
+    key,
+    value
+  ) => {
+    const updated = [
+      ...estoqueData,
+    ];
 
     updated[rowIndex] = {
       ...updated[rowIndex],
@@ -183,7 +324,10 @@ export function EstoqueScreen({ onBack }) {
 
     setEstoqueData(updated);
 
-    persistCache(updated, jsonFileName);
+    persistCache(
+      updated,
+      jsonFileName
+    );
   };
 
   const adicionarProduto = () => {
@@ -196,21 +340,33 @@ export function EstoqueScreen({ onBack }) {
       Observacao: "",
     };
 
-    const updated = [...estoqueData, novoProduto];
+    const updated = [
+      ...estoqueData,
+      novoProduto,
+    ];
 
     setEstoqueData(updated);
 
-    persistCache(updated, jsonFileName);
+    persistCache(
+      updated,
+      jsonFileName
+    );
   };
 
-  const removerProduto = (index) => {
-    const updated = estoqueData.filter(
-      (_, i) => i !== index
-    );
+  const removerProduto = (
+    index
+  ) => {
+    const updated =
+      estoqueData.filter(
+        (_, i) => i !== index
+      );
 
     setEstoqueData(updated);
 
-    persistCache(updated, jsonFileName);
+    persistCache(
+      updated,
+      jsonFileName
+    );
   };
 
   return (
@@ -218,11 +374,16 @@ export function EstoqueScreen({ onBack }) {
       <div className="excel-card">
         <div className="excel-header">
           <div>
-            <h2>Sistema de Estoque</h2>
+            <h2>
+              Sistema de Estoque
+            </h2>
 
             <p>
-              Gerencie peças, códigos, quantidades e
-              valores diretamente pela interface.
+              Gerencie peças,
+              códigos,
+              quantidades e valores
+              diretamente pela
+              interface.
             </p>
           </div>
 
@@ -237,84 +398,143 @@ export function EstoqueScreen({ onBack }) {
         <div className="excel-actions">
           <button
             className="btn-primary"
-            onClick={criarNovoEstoque}
+            onClick={
+              criarNovoEstoque
+            }
           >
             Gerar JSON
           </button>
 
-          <button
-            className="btn-primary"
-            onClick={carregarJSON}
-          >
-            Carregar JSON
-          </button>
+          {/* DESKTOP */}
+          {window.showOpenFilePicker ? (
+            <button
+              className="btn-primary"
+              onClick={
+                carregarJSON
+              }
+            >
+              Carregar JSON
+            </button>
+          ) : (
+            // MOBILE
+            <label className="btn-primary">
+              Carregar JSON
+
+              <input
+                type="file"
+                accept=".json"
+                hidden
+                onChange={
+                  carregarJSON
+                }
+              />
+            </label>
+          )}
 
           <button
             className="btn-primary"
-            onClick={salvarJSONAlterado}
-            disabled={!estoqueData.length}
+            onClick={
+              salvarJSONAlterado
+            }
+            disabled={
+              !estoqueData.length
+            }
           >
             Salvar Alterações
           </button>
 
           <button
             className="btn-primary"
-            onClick={adicionarProduto}
+            onClick={
+              adicionarProduto
+            }
           >
             + Adicionar Produto
           </button>
         </div>
 
-        {estoqueData.length > 0 && (
+        {estoqueData.length >
+          0 && (
           <div className="excel-table-wrapper">
             <table className="excel-table">
               <thead>
                 <tr>
-                  {Object.keys(estoqueData[0]).map(
-                    (column) => (
-                      <th key={column}>{column}</th>
-                    )
-                  )}
+                  {Object.keys(
+                    estoqueData[0]
+                  ).map((column) => (
+                    <th key={column}>
+                      {column}
+                    </th>
+                  ))}
 
-                  <th>Ações</th>
+                  <th>
+                    Ações
+                  </th>
                 </tr>
               </thead>
 
               <tbody>
-                {estoqueData.map((row, rowIndex) => (
-                  <tr key={rowIndex}>
-                    {Object.entries(row).map(
-                      ([key, value]) => (
-                        <td key={key}>
-                          <input
-                            value={value}
-                            disabled={
-                              key === "Codigo"
+                {estoqueData.map(
+                  (
+                    row,
+                    rowIndex
+                  ) => (
+                    <tr
+                      key={
+                        rowIndex
+                      }
+                    >
+                      {Object.entries(
+                        row
+                      ).map(
+                        ([
+                          key,
+                          value,
+                        ]) => (
+                          <td
+                            key={
+                              key
                             }
-                            onChange={(event) =>
-                              atualizarLinha(
-                                rowIndex,
-                                key,
-                                event.target.value
-                              )
-                            }
-                          />
-                        </td>
-                      )
-                    )}
+                          >
+                            <input
+                              value={
+                                value
+                              }
+                              disabled={
+                                key ===
+                                "Codigo"
+                              }
+                              onChange={(
+                                event
+                              ) =>
+                                atualizarLinha(
+                                  rowIndex,
+                                  key,
+                                  event
+                                    .target
+                                    .value
+                                )
+                              }
+                            />
+                          </td>
+                        )
+                      )}
 
-                    <td>
-                      <button
-                        className="btn-delete"
-                        onClick={() =>
-                          removerProduto(rowIndex)
-                        }
-                      >
-                        Remover
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      <td>
+                        <button
+                          className="btn-delete"
+                          onClick={() =>
+                            removerProduto(
+                              rowIndex
+                            )
+                          }
+                        >
+                          Remover
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                )}
               </tbody>
             </table>
           </div>
