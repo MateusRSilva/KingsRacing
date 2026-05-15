@@ -47,6 +47,26 @@ body {
 
 .app-logo { height: 45px; filter: brightness(0) invert(1); }
 
+.agendamento-textarea {
+  background: var(--input);
+  border: 1px solid var(--border);
+  color: white;
+  padding: 14px;
+  border-radius: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 14px;
+  resize: vertical;
+  min-height: 120px;
+  transition: var(--transition);
+}
+
+.agendamento-textarea:focus {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(0, 210, 255, 0.1);
+}
+
 .home-screen {
   width: 100%;
   display: flex;
