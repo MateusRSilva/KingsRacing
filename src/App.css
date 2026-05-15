@@ -71,6 +71,246 @@ body {
   transition: var(--transition);
 }
 
+/* --- ESTILOS DO CRONOGRAMA RECOLHÍVEL --- */
+
+.month-group {
+  margin-bottom: 15px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.02);
+  transition: border-color 0.3s ease;
+}
+
+.month-group:hover {
+  border-color: rgba(0, 210, 255, 0.5);
+}
+
+.month-header {
+  padding: 16px 20px;
+  cursor: pointer;
+  background: linear-gradient(90deg, rgba(0, 210, 255, 0.1) 0%, transparent 100%);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.month-header span:first-child {
+  color: var(--accent);
+  font-weight: 900;
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+
+/* Lógica da Abertura Suave */
+.collapsible-wrapper {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.collapsible-wrapper.is-open {
+  grid-template-rows: 1fr;
+}
+
+.collapsible-content {
+  overflow: hidden;
+}
+
+/* Estilo dos Dias */
+.day-group {
+  margin-bottom: 8px;
+  background: var(--input);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.day-header {
+  padding: 12px 16px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.day-header:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Ícones e Itens */
+.arrow-icon {
+  transition: transform 0.3s ease;
+  color: var(--text-dim);
+}
+
+.arrow-icon.rotated {
+  transform: rotate(180deg);
+  color: var(--accent);
+}
+
+.service-item {
+  padding: 12px;
+  background: var(--card);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.service-item:hover {
+  border-color: var(--accent);
+}
+
+.scroll-container::-webkit-scrollbar {
+  width: 5px;
+}
+
+.scroll-container::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 10px;
+}
+
+/* CONTAINER DO GRUPO (MÊS) */
+.month-group {
+  margin-bottom: 20px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.02);
+  transition: var(--transition);
+}
+
+.month-group:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 20px rgba(0, 210, 255, 0.05);
+}
+
+/* CABEÇALHO DO MÊS */
+.month-header {
+  padding: 16px 20px;
+  cursor: pointer;
+  background: linear-gradient(90deg, rgba(0, 210, 255, 0.15) 0%, transparent 100%);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: var(--transition);
+}
+
+.month-header:hover {
+  background: linear-gradient(90deg, rgba(0, 210, 255, 0.25) 0%, transparent 100%);
+}
+
+.month-header span:first-child {
+  color: var(--accent);
+  font-weight: 900;
+  font-size: 13px;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px rgba(0, 210, 255, 0.3);
+}
+
+/* CONTAINER DOS DIAS */
+.day-group {
+  margin-bottom: 10px;
+  background: var(--input);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: var(--transition);
+}
+
+.day-group:hover {
+  transform: translateX(5px);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* CABEÇALHO DO DIA */
+.day-header {
+  padding: 12px 16px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 14px;
+  font-weight: 600;
+  transition: var(--transition);
+}
+
+.day-header:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--accent);
+}
+
+.day-header .arrow {
+  font-size: 10px;
+  color: var(--text-dim);
+  transition: transform 0.3s ease;
+}
+
+/* CARDS DE SERVIÇO INTERNOS */
+.service-item {
+  padding: 12px;
+  background: var(--card);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  transition: var(--transition);
+}
+
+.service-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--accent);
+}
+
+/* AJUSTE NO SCROLLBAR DA LISTA */
+.scroll-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scroll-container::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 10px;
+}
+
+.scroll-container::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
+/* Container que controla a animação */
+.collapsible-wrapper {
+  display: grid;
+  grid-template-rows: 0fr; /* Começa fechado */
+  transition: grid-template-rows 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Quando estiver aberto, expande para 1fr */
+.collapsible-wrapper.is-open {
+  grid-template-rows: 1fr;
+}
+
+/* O conteúdo interno precisa de overflow hidden para não aparecer antes do tempo */
+.collapsible-content {
+  overflow: hidden;
+}
+
+/* Efeito de rotação suave na setinha */
+.arrow-icon {
+  transition: transform 0.3s ease;
+  display: inline-block;
+}
+
+.arrow-icon.rotated {
+  transform: rotate(180deg);
+}
+
 .input-group input[type="file"]::file-selector-button:hover {
   transform: scale(1.05);
   box-shadow: 0 0 15px rgba(0, 210, 255, 0.4);
