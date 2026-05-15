@@ -47,6 +47,35 @@ body {
 
 .app-logo { height: 45px; filter: brightness(0) invert(1); }
 
+/* Container do input */
+.input-group input[type="file"] {
+  background: var(--input);
+  border: 1px dashed var(--border);
+  padding: 10px;
+  cursor: pointer;
+  color: var(--text-dim);
+}
+
+/* O botão real dentro do input */
+.input-group input[type="file"]::file-selector-button {
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  margin-right: 15px;
+  font-weight: 800;
+  font-size: 11px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.input-group input[type="file"]::file-selector-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 15px rgba(0, 210, 255, 0.4);
+}
+
 .agendamento-textarea {
   background: var(--input);
   border: 1px solid var(--border);
