@@ -5,33 +5,48 @@ export function Resultado({ resultado, cliente, desconto, config }) {
   if (!resultado.length) return null;
 
   const pageWidth = 210;
+  const taxaMaq = (config?.taxaMaquininha || 0) / 100;
+  const fatorDesconto = 1 - (desconto?.porcentagem || 0) / 100;
 
-  // --- LÓGICA DE CÁLCULO (CORRIGIDA E ORGANIZADA) ---
-
-  // 1. Subtotal apenas dos itens (Peças / Serviços)
-  const subtotalItens = resultado.reduce((a, i) => a + i.valorBase, 0);
-
-  // 2. Mão de obra separada (se ativado)
+  // --- NOVA LÓGICA DE CÁLCULO COM RATEIO INTEGRADO ---
+  
+  // 1. Calculamos o total bruto da ordem (Itens com margem + Mão de obra se houver)
+  // Nota: i.valorBase aqui já vem do OrderScreen com a margem (e com a MO caso não esteja separada)
+  const totalBrutoItens = resultado.reduce((a, i) => a + i.valorBase, 0);
   const totalMaoObraSeparada = config?.mostrarMaoObraSeparada
     ? resultado.reduce((a, i) => a + (i.maoObraIndividual || 0), 0)
     : 0;
 
-  // 3. Base real total (itens + mão de obra)
-  const baseTotal = subtotalItens + totalMaoObraSeparada;
+  const baseTotalO_S = totalBrutoItens + totalMaoObraSeparada;
 
-  // 4. Desconto aplicado corretamente em cima do total real
-  const valorDesconto =
-    baseTotal * ((desconto?.porcentagem || 0) / 100);
+  // 2. Aplicamos o desconto e a taxa no montante geral para achar o multiplicador de ajuste
+  const valorPosDescontoGeral = baseTotalO_S * fatorDesconto;
+  const totalGeral = valorPosDescontoGeral * (1 + taxaMaq);
 
-  // 5. Valor após desconto
-  const valorPosDesconto = baseTotal - valorDesconto;
+  // 3. Fator de ajuste: diz quanto cada Real bruto virou após o desconto + taxa
+  const fatorAjuste = baseTotalO_S > 0 ? totalGeral / baseTotalO_S : 1;
 
-  // 6. Taxa da maquininha aplicada após desconto
-  const taxaMaq = (config?.taxaMaquininha || 0) / 100;
-  const valorTaxaMaquininha = valorPosDesconto * taxaMaq;
+  // 4. MAPEAMENTO DOS ITENS: Criamos uma lista onde cada item já absorveu sua parte da taxa e do desconto
+  const itensProcessados = resultado.map(item => {
+    // Se a MO estiver separada, o valor base do item é só a peça. Se não, inclui a MO embutida.
+    const valorBaseComMO = item.valorBase; 
+    return {
+      nome: item.nome || "Item sem nome",
+      // O valor final do item já com desconto aplicado e taxa rateada proporcionalmente:
+      valorFinalRateado: valorBaseComMO * fatiadorItemAjuste(item)
+    };
+  });
 
-  // 7. TOTAL FINAL
-  const totalGeral = valorPosDesconto + valorTaxaMaquininha;
+  // Auxiliar para aplicar o fator de ajuste mantendo a proporção exata
+  function fatiadorItemAjuste(item) {
+    return fatorAjuste;
+  }
+
+  // Se a Mão de obra estiver separada, ela também precisa sofrer o desconto e a taxa do cartão
+  const maoObraFinalSeparada = totalMaoObraSeparada * fatiadorItemAjuste();
+
+  // Recalcula o subtotal dos itens já atualizados com a taxa embutida
+  const subtotalItensComTaxa = itensProcessados.reduce((a, i) => a + i.valorFinalRateado, 0);
 
   function gerarPDF() {
     const doc = new jsPDF();
@@ -72,8 +87,8 @@ export function Resultado({ resultado, cliente, desconto, config }) {
     y += info.length * lh + 15;
 
     doc.setFont("helvetica", "bold");
-    doc.text("Descrição do Serviço / Peça", 12, y);
-    doc.text("Valor", 190, y, { align: "right" });
+    doc.text("Descrição do Serviço / Peça (Valores com Taxas)", 12, y);
+    doc.text("Valor Final", 190, y, { align: "right" });
 
     y += 5;
     doc.line(10, y, 200, y);
@@ -81,9 +96,9 @@ export function Resultado({ resultado, cliente, desconto, config }) {
 
     doc.setFont("helvetica", "normal");
 
-    resultado.forEach((item) => {
-      doc.text(item.nome || "Item sem nome", 12, y);
-      doc.text(`R$ ${item.valorBase.toFixed(2)}`, 190, y, {
+    itensProcessados.forEach((item) => {
+      doc.text(item.nome, 12, y);
+      doc.text(`R$ ${item.valorFinalRateado.toFixed(2)}`, 190, y, {
         align: "right",
       });
       y += 7;
@@ -93,10 +108,9 @@ export function Resultado({ resultado, cliente, desconto, config }) {
     doc.line(120, y, 200, y);
     y += 7;
 
-    // --- RESUMO FINAL ---
-
-    doc.text("Subtotal:", 140, y);
-    doc.text(`R$ ${subtotalItens.toFixed(2)}`, 190, y, {
+    // --- RESUMO FINAL NO PDF ---
+    doc.text("Subtotal Itens:", 140, y);
+    doc.text(`R$ ${subtotalItensComTaxa.toFixed(2)}`, 190, y, {
       align: "right",
     });
     y += 7;
@@ -104,26 +118,20 @@ export function Resultado({ resultado, cliente, desconto, config }) {
     if (config?.mostrarMaoObraSeparada) {
       doc.setFont("helvetica", "bold");
       doc.text("Mão de Obra:", 140, y);
-      doc.text(`R$ ${totalMaoObraSeparada.toFixed(2)}`, 190, y, {
+      doc.text(`R$ ${maoObraFinalSeparada.toFixed(2)}`, 190, y, {
         align: "right",
       });
       doc.setFont("helvetica", "normal");
       y += 7;
     }
 
+    // Nota informativa se houve desconto original
     if (desconto?.porcentagem > 0) {
-      doc.text(`Desconto (${desconto.porcentagem}%):`, 140, y);
-      doc.text(`- R$ ${valorDesconto.toFixed(2)}`, 190, y, {
-        align: "right",
-      });
-      y += 7;
-    }
-
-    if (config?.taxaMaquininha > 0) {
-      doc.text(`Taxa Cartão (${config.taxaMaquininha}%):`, 140, y);
-      doc.text(`R$ ${valorTaxaMaquininha.toFixed(2)}`, 190, y, {
-        align: "right",
-      });
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "italic");
+      doc.text(`* Desconto de ${desconto.porcentagem}% aplicado nos itens`, 120, y);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
       y += 7;
     }
 
@@ -167,16 +175,16 @@ export function Resultado({ resultado, cliente, desconto, config }) {
       <table className="resumo-table">
         <thead>
           <tr>
-            <th>Descrição do Serviço / Peça</th>
+            <th>Descrição do Serviço / Peça (Taxa Inclusa)</th>
             <th className="col-valor">Total</th>
           </tr>
         </thead>
         <tbody>
-          {resultado.map((item, i) => (
+          {itensProcessados.map((item, i) => (
             <tr key={i}>
-              <td>{item.nome || "Item sem nome"}</td>
+              <td>{item.nome}</td>
               <td className="col-valor">
-                R$ {item.valorBase.toFixed(2)}
+                R$ {item.valorFinalRateado.toFixed(2)}
               </td>
             </tr>
           ))}
@@ -187,35 +195,21 @@ export function Resultado({ resultado, cliente, desconto, config }) {
         <div className="total-box">
           <div className="total-linha">
             <span>Subtotal Itens:</span>
-            <span>R$ {subtotalItens.toFixed(2)}</span>
+            <span>R$ {subtotalItensComTaxa.toFixed(2)}</span>
           </div>
 
           {config?.mostrarMaoObraSeparada && (
             <div className="total-linha mo-destaque">
               <span>Mão de Obra:</span>
-              <span>R$ {totalMaoObraSeparada.toFixed(2)}</span>
+              <span>R$ {maoObraFinalSeparada.toFixed(2)}</span>
             </div>
           )}
 
           {desconto?.porcentagem > 0 && (
-            <div className="total-linha">
-              <span>
-                Desconto{" "}
-                <span className="desconto-badge">
-                  {desconto.porcentagem}%
-                </span>
-                :
+            <div className="total-linha informativo-desconto">
+              <span style={{ fontSize: '0.85em', color: '#666' }}>
+                * Valores acima já calculados com {desconto.porcentagem}% de desconto.
               </span>
-              <span className="valor-desconto">
-                - R$ {valorDesconto.toFixed(2)}
-              </span>
-            </div>
-          )}
-
-          {config?.taxaMaquininha > 0 && (
-            <div className="total-linha">
-              <span>Taxa Cartão ({config.taxaMaquininha}%):</span>
-              <span>R$ {valorTaxaMaquininha.toFixed(2)}</span>
             </div>
           )}
 
