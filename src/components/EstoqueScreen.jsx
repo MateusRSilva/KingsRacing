@@ -1,60 +1,59 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+
+// Definição estrita das colunas do sistema para evitar desalinhamento
+const COLUNAS = ["Codigo", "Produto", "Quantidade", "PrecoCompra", "PrecoVenda", "Observacao"];
 
 const DEFAULT_TEMPLATE = [
   {
     Codigo: "P001",
     Produto: "",
-    Quantidade: "",
-    PrecoCompra: "",
-    PrecoVenda: "",
+    Quantidade: 0,
+    PrecoCompra: 0,
+    PrecoVenda: 0,
     Observacao: "",
   },
 ];
 
 const CACHE_KEY = "kingsracing_estoque_cache";
 
-// HANDLE GLOBAL
-window.kingsFileHandle = window.kingsFileHandle || null;
-
 export function EstoqueScreen({ onBack }) {
   const [estoqueData, setEstoqueData] = useState([]);
-  const [jsonFileName, setJsonFileName] =
-    useState("estoque.json");
-
-  const [fileHandle, setFileHandle] =
-    useState(null);
+  const [jsonFileName, setJsonFileName] = useState("estoque.json");
+  const fileInputRef = useRef(null); // Referência para o input tradicional oculto
 
   useEffect(() => {
-    const cache =
-      localStorage.getItem(CACHE_KEY);
-
+    const cache = localStorage.getItem(CACHE_KEY);
     if (cache) {
       try {
-        const { data, fileName } =
-          JSON.parse(cache);
-
-        if (
-          Array.isArray(data) &&
-          data.length > 0
-        ) {
-          setEstoqueData(data);
-
-          setJsonFileName(
-            fileName || "estoque.json"
-          );
+        const { data, fileName } = JSON.parse(cache);
+        if (Array.isArray(data) && data.length > 0) {
+          setEstoqueData(normalizarDados(data));
+          setJsonFileName(fileName || "estoque.json");
+        } else {
+          setEstoqueData(DEFAULT_TEMPLATE);
         }
       } catch {
-        localStorage.removeItem(
-          CACHE_KEY
-        );
+        localStorage.removeItem(CACHE_KEY);
+        setEstoqueData(DEFAULT_TEMPLATE);
       }
+    } else {
+      setEstoqueData(DEFAULT_TEMPLATE);
     }
   }, []);
 
-  const persistCache = (
-    data,
-    fileName
-  ) => {
+  // Garante que todo item tenha todas as propriedades necessárias e corretas
+  const normalizarDados = (lista) => {
+    return lista.map((item) => ({
+      Codigo: item.Codigo || "",
+      Produto: item.Produto || "",
+      Quantidade: item.Quantidade === "" || item.Quantidade === undefined ? 0 : Number(item.Quantidade),
+      PrecoCompra: item.PrecoCompra === "" || item.PrecoCompra === undefined ? 0 : Number(item.PrecoCompra),
+      PrecoVenda: item.PrecoVenda === "" || item.PrecoVenda === undefined ? 0 : Number(item.PrecoVenda),
+      Observacao: item.Observacao || "",
+    }));
+  };
+
+  const persistCache = (data, fileName) => {
     localStorage.setItem(
       CACHE_KEY,
       JSON.stringify({
@@ -64,467 +63,209 @@ export function EstoqueScreen({ onBack }) {
     );
   };
 
-  const gerarCodigo = () => {
-    const ultimoIndex =
-      estoqueData.length + 1;
-
-    return `P${String(
-      ultimoIndex
-    ).padStart(3, "0")}`;
+  const gerarCodigo = (dadosAtuais) => {
+    const lista = dadosAtuais || estoqueData;
+    const ultimoIndex = lista.length + 1;
+    return `P${String(ultimoIndex).padStart(3, "0")}`;
   };
 
-  const salvarDiretoNoArquivo =
-    async (
-      data,
-      customHandle = null
-    ) => {
-      try {
-        const handle =
-          customHandle || fileHandle;
-
-        if (
-          handle &&
-          window.showSaveFilePicker
-        ) {
-          const writable =
-            await handle.createWritable();
-
-          await writable.write(
-            JSON.stringify(
-              data,
-              null,
-              2
-            )
-          );
-
-          await writable.close();
-
-          return true;
-        }
-
-        persistCache(
-          data,
-          jsonFileName
-        );
-
-        return true;
-      } catch (error) {
-        console.error(
-          "Erro ao salvar:",
-          error
-        );
-
-        return false;
-      }
-    };
-
-  // EXPORTAR BACKUP
-  const baixarBackupJSON = (
-    data
-  ) => {
-    const blob = new Blob(
-      [
-        JSON.stringify(
-          data,
-          null,
-          2
-        ),
-      ],
-      {
-        type: "application/json",
-      }
-    );
-
-    const url =
-      URL.createObjectURL(blob);
-
-    const link =
-      document.createElement("a");
-
-    link.href = url;
-
-    link.download =
-      jsonFileName ||
-      "estoque.json";
-
-    link.click();
-
-    URL.revokeObjectURL(url);
-  };
-
-  const criarNovoEstoque =
-    async () => {
-      try {
-        const handle =
-          await window.showSaveFilePicker(
-            {
-              suggestedName:
-                "estoque.json",
-              types: [
-                {
-                  description:
-                    "Arquivo JSON",
-                  accept: {
-                    "application/json":
-                      [".json"],
-                  },
-                },
-              ],
-            }
-          );
-
-        window.kingsFileHandle =
-          handle;
-
-        setFileHandle(handle);
-
-        setEstoqueData(
-          DEFAULT_TEMPLATE
-        );
-
-        setJsonFileName(
-          "estoque.json"
-        );
-
-        persistCache(
-          DEFAULT_TEMPLATE,
-          "estoque.json"
-        );
-
-        await salvarDiretoNoArquivo(
-          DEFAULT_TEMPLATE,
-          handle
-        );
-
-        return;
-      } catch (error) {
-        console.error(error);
-      }
-    };
-
-  const carregarJSON = async (
-    event = null
-  ) => {
+  // EXPORTAR BACKUP (Abordagem Universal via Link Temporário)
+  const baixarBackupJSON = (data) => {
     try {
-      const [handle] =
-        await window.showOpenFilePicker(
-          {
-            types: [
-              {
-                description:
-                  "Arquivo JSON",
-                accept: {
-                  "application/json":
-                    [".json"],
-                },
-              },
-            ],
-          }
-        );
-
-      const file =
-        await handle.getFile();
-
-      const text =
-        await file.text();
-
-      const jsonData =
-        JSON.parse(text);
-
-      if (
-        !Array.isArray(
-          jsonData
-        )
-      ) {
-        alert(
-          "O JSON precisa ser um array."
-        );
-
+      if (!data || !Array.isArray(data) || data.length === 0) {
+        alert("Não há dados disponíveis para exportar.");
         return;
       }
 
-      window.kingsFileHandle =
-        handle;
+      const jsonString = JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonString], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      
+      const nomeDoArquivo = jsonFileName && jsonFileName.trim() !== "" 
+        ? jsonFileName 
+        : "estoque.json";
 
-      setFileHandle(handle);
-
-      setEstoqueData(
-        jsonData
-      );
-
-      setJsonFileName(
-        file.name
-      );
-
-      persistCache(
-        jsonData,
-        file.name
-      );
-
-      return;
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = nomeDoArquivo.endsWith(".json") ? nomeDoArquivo : `${nomeDoArquivo}.json`;
+      
+      document.body.appendChild(link);
+      link.click();
+      
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     } catch (error) {
-      console.error(error);
+      console.error("Erro crítico ao exportar o arquivo:", error);
+      alert("Ocorreu um erro ao gerar o arquivo de backup.");
     }
   };
 
-  const salvarJSONAlterado =
-    async () => {
-      const confirmar =
-        window.confirm(
-          "Tem certeza que deseja salvar as alterações?"
-        );
+  // CARREGAR JSON (Abordagem Universal e Compatível com todos os navegadores)
+  const lidarComSelecaoDeArquivo = (event) => {
+    const arquivo = event.target.files[0];
+    if (!arquivo) return;
 
-      if (!confirmar) return;
+    const leitor = new FileReader();
+    
+    leitor.onload = (e) => {
+      try {
+        const texto = e.target.result;
+        const jsonData = JSON.parse(texto);
 
-      persistCache(
-        estoqueData,
-        jsonFileName
-      );
+        if (!Array.isArray(jsonData)) {
+          alert("O JSON precisa ser um array de produtos (ex: [{...}]).");
+          return;
+        }
 
-      const salvou =
-        await salvarDiretoNoArquivo(
-          estoqueData
-        );
+        const dadosNormalizados = normalizarDados(jsonData.length === 0 ? DEFAULT_TEMPLATE : jsonData);
 
-      if (!salvou) {
-        alert(
-          "Erro ao salvar arquivo."
-        );
+        setJsonFileName(arquivo.name);
+        setEstoqueData([...dadosNormalizados]);
+        persistCache(dadosNormalizados, arquivo.name);
+        
+        // Limpa o valor do input para permitir carregar o mesmo arquivo novamente se necessário
+        event.target.value = "";
+      } catch (error) {
+        console.error("Erro na leitura do JSON:", error);
+        alert("Erro ao processar o arquivo. Certifique-se de que ele é um arquivo JSON válido.");
       }
     };
 
-  const atualizarLinha = (
-    rowIndex,
-    key,
-    value
-  ) => {
-    const updated = [
-      ...estoqueData,
-    ];
+    leitor.onerror = () => {
+      alert("Erro ao ler o arquivo físico.");
+    };
 
+    leitor.readAsText(arquivo);
+  };
+
+  const dispararSeletorArquivo = () => {
+    // Simula o clique no input file invisível
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const atualizarLinha = (rowIndex, key, value) => {
+    const updated = [...estoqueData];
     updated[rowIndex] = {
       ...updated[rowIndex],
       [key]: value,
     };
-
     setEstoqueData(updated);
-
-    persistCache(
-      updated,
-      jsonFileName
-    );
+    persistCache(updated, jsonFileName);
   };
 
   const adicionarProduto = () => {
-    const novoProduto = {
-      Codigo: gerarCodigo(),
-      Produto: "",
-      Quantidade: "",
-      PrecoCompra: "",
-      PrecoVenda: "",
-      Observacao: "",
-    };
-
     const updated = [
       ...estoqueData,
-      novoProduto,
+      {
+        Codigo: gerarCodigo(estoqueData),
+        Produto: "",
+        Quantidade: 0,
+        PrecoCompra: 0,
+        PrecoVenda: 0,
+        Observacao: "",
+      },
     ];
-
     setEstoqueData(updated);
-
-    persistCache(
-      updated,
-      jsonFileName
-    );
+    persistCache(updated, jsonFileName);
   };
 
-  const removerProduto = (
-    index
-  ) => {
-    const updated =
-      estoqueData.filter(
-        (_, i) => i !== index
-      );
-
+  const removerProduto = (index) => {
+    let updated = estoqueData.filter((_, i) => i !== index);
+    if (updated.length === 0) {
+      updated = DEFAULT_TEMPLATE;
+    }
     setEstoqueData(updated);
-
-    persistCache(
-      updated,
-      jsonFileName
-    );
+    persistCache(updated, jsonFileName);
   };
 
   return (
     <div className="excel-screen">
+      {/* Input de arquivo invisível para máxima compatibilidade */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        style={{ display: "none" }}
+        accept=".json,application/json"
+        onChange={lidarComSelecaoDeArquivo}
+      />
+
       <div className="excel-card">
         <div className="excel-header">
           <div>
-            <h2>
-              Sistema de Estoque
-            </h2>
-
-            <p>
-              Gerencie peças,
-              códigos,
-              quantidades e valores
-              diretamente pela
-              interface.
-            </p>
+            <h2>Sistema de Estoque</h2>
+            <p>Gerencie peças, códigos, quantidades e valores diretamente pela interface.</p>
+            <small style={{ color: "#666" }}>Arquivo atual: {jsonFileName}</small>
           </div>
-
-          <button
-            className="btn-outline"
-            onClick={onBack}
-          >
+          <button className="btn-outline" onClick={onBack}>
             ← Voltar
           </button>
         </div>
 
         <div className="excel-actions">
-          <button
-            className="btn-primary"
-            onClick={
-              criarNovoEstoque
-            }
-          >
-            Gerar JSON
-          </button>
-
-          <button
-            className="btn-primary"
-            onClick={
-              carregarJSON
-            }
-          >
+          <button className="btn-primary" onClick={dispararSeletorArquivo}>
             Carregar JSON
           </button>
-
           <button
             className="btn-primary"
-            onClick={
-              salvarJSONAlterado
-            }
-            disabled={
-              !estoqueData.length
-            }
-          >
-            Salvar Alterações
-          </button>
-
-          <button
-            className="btn-primary"
-            onClick={() =>
-              baixarBackupJSON(
-                estoqueData
-              )
-            }
-            disabled={
-              !estoqueData.length
-            }
+            onClick={() => baixarBackupJSON(estoqueData)}
+            disabled={!estoqueData || estoqueData.length === 0}
           >
             Exportar Backup
           </button>
-
-          <button
-            className="btn-primary"
-            onClick={
-              adicionarProduto
-            }
-          >
+          <button className="btn-primary" onClick={adicionarProduto}>
             + Adicionar Produto
           </button>
         </div>
 
-        {estoqueData.length >
-          0 && (
+        {estoqueData && estoqueData.length > 0 && (
           <div className="excel-table-wrapper">
             <table className="excel-table">
               <thead>
                 <tr>
-                  {Object.keys(
-                    estoqueData[0]
-                  ).map(
-                    (column) => (
-                      <th
-                        key={column}
-                      >
-                        {column}
-                      </th>
-                    )
-                  )}
-
-                  <th>
-                    Ações
-                  </th>
+                  {COLUNAS.map((column) => (
+                    <th key={column}>{column}</th>
+                  ))}
+                  <th>Ações</th>
                 </tr>
               </thead>
-
               <tbody>
-                {estoqueData.map(
-                  (
-                    row,
-                    rowIndex
-                  ) => (
-                    <tr
-                      key={
-                        rowIndex
-                      }
-                    >
-                      {Object.entries(
-                        row
-                      ).map(
-                        ([
-                          key,
-                          value,
-                        ]) => {
-                          const isNumberField = ["Quantidade", "PrecoCompra", "PrecoVenda", "ValorDeVenda"].includes(key);
-                          
-                          return (
-                            <td
-                              key={
-                                key
-                              }
-                            >
-                              <input
-                                type={isNumberField ? "number" : "text"}
-                                value={value}
-                                disabled={
-                                  key ===
-                                  "Codigo"
-                                }
-                                onChange={(
-                                  event
-                                ) => {
-                                  const rawVal = event.target.value;
-                                  const finalVal = isNumberField ? (rawVal === "" ? 0 : Number(rawVal)) : rawVal;
-                                  
-                                  atualizarLinha(
-                                    rowIndex,
-                                    key,
-                                    finalVal
-                                  )
-                                }}
-                              />
-                            </td>
-                          )
-                        }
-                      )}
+                {estoqueData.map((row, rowIndex) => (
+                  <tr key={rowIndex}>
+                    {COLUNAS.map((key) => {
+                      const value = row[key];
+                      const isNumberField = ["Quantidade", "PrecoCompra", "PrecoVenda"].includes(key);
 
-                      <td>
-                        <button
-                          className="btn-delete"
-                          onClick={() =>
-                            removerProduto(
-                              rowIndex
-                            )
-                          }
-                        >
-                          Remover
-                        </button>
-                      </td>
-                    </tr>
-                  )
-                )}
+                      return (
+                        <td key={key}>
+                          <input
+                            type={isNumberField ? "number" : "text"}
+                            value={isNumberField && value === 0 ? "" : (value ?? "")}
+                            placeholder={isNumberField ? "0" : ""}
+                            disabled={key === "Codigo"}
+                            onChange={(event) => {
+                              const rawVal = event.target.value;
+                              const finalVal = isNumberField
+                                ? rawVal === "" ? 0 : Number(rawVal)
+                                : rawVal;
+
+                              atualizarLinha(rowIndex, key, finalVal);
+                            }}
+                          />
+                        </td>
+                      );
+                    })}
+                    <td>
+                      <button
+                        className="btn-delete"
+                        onClick={() => removerProduto(rowIndex)}
+                      >
+                        Remover
+                      </button>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
